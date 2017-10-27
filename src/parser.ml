@@ -15,7 +15,7 @@ let rec to_string = function
     | Epsilon -> ""
 let print r = print_endline (to_string r)
 
-let parse (input:string) : re =
+let parse_rd (input:string) : re =
     let rec parse_alternation s : re =
         let r = parse_concatenation s in
         match S.peek s with
@@ -54,20 +54,94 @@ let parse (input:string) : re =
                 S.junk s;
                 Letter c
     in
-    parse_alternation (Stream.of_string input)
+    parse_alternation (S.of_string input)
+
+
+type token =
+    | Concat
+    | Alter
+    | Repeat
+    | Letter of char
+    | Open
+    | Close
+let to_tokens (input:string) : token list =
+    let rec aux cs ts =
+        match S.peek cs with
+            | None -> List.rev ts
+            | Some c -> (
+                    S.junk cs;
+                    match c with
+                        | '(' -> aux cs (Open::ts)
+                        | ')' -> aux cs (Close::ts)
+                        | '*' -> aux cs (Repeat::ts)
+                        | '|' -> aux cs (Alter::ts)
+                        | _ -> aux cs ((Letter c)::ts)
+                )
+    in
+    aux (S.of_string input) []
+
+let parse_shunting_yard (input:string) : re =
+    let precedence = function
+        | Open -> 0
+        | Close -> 0
+        | Letter _ -> 0
+        | Repeat -> 3
+        | Concat -> 2
+        | Alter -> 1
+    in
+    let rec consume_token (s:token list) (operators:token list) (operands:re list) (need_concat:bool) : re =
+        match s, operators with
+            | [], [] ->
+                List.hd operands
+            | [], _ ->
+                consume_operator s operators operands
+
+            | (Letter c)::t, _ ->
+                if need_concat
+                then consume_token (Concat::s) operators operands false
+                else consume_token t operators ((Letter c)::operands) true
+
+            | Open::t, _ ->
+                if need_concat
+                then consume_token (Concat::s) operators operands false
+                else consume_token t (Open::operators) operands false
+
+            | Close::t, Open::tt ->
+                consume_token t tt operands true
+            | Close::_, _ ->
+                consume_operator s operators operands
+
+            | h::t, [] ->
+                consume_token t (h::operators) operands false
+            | h::t, hh::_ when (precedence h) >= (precedence hh) ->
+                consume_token t (h::operators) operands false
+            | _::_, _::_ ->
+                consume_operator s operators operands
+    and consume_operator s operators operands =
+        match operators, operands with
+            | Alter::t, x1::x2::rands ->
+                consume_token s t ((Alternation (x2, x1)) :: rands) false
+            | Concat::t, x1::x2::rands ->
+                consume_token s t ((Concatenation (x2, x1)) :: rands) false
+            | Repeat::t, x::rands ->
+                consume_token s t ((Repeation x) :: rands) false
+            | _ -> failwith ""
+    in
+    consume_token (to_tokens input) [] [] false
 
 let _ =
-    parse ""            |> print;
-parse "a"           |> print;
-parse "abc"         |> print;
-parse "a|b"         |> print;
-parse "a|b|c"       |> print;
-parse "a|"          |> print;
-parse "|b"          |> print;
-parse "|"           |> print;
-parse "||"          |> print;
-parse "(ab)c"       |> print;
-parse "a(bc)"       |> print;
-parse "(a|)b"       |> print;
-parse "(|a)b"       |> print;
-parse "(a||)b"      |> print;
+    (* parse_rd ""            |> print; *)
+    (* parse_rd "a"           |> print; *)
+    (* parse_rd "abc"         |> print; *)
+    (* parse_rd "a|b"         |> print; *)
+    (* parse_rd "a|b|c"       |> print; *)
+    (* parse_rd "a|"          |> print; *)
+    (* parse_rd "|b"          |> print; *)
+    (* parse_rd "|"           |> print; *)
+    (* parse_rd "||"          |> print; *)
+    (* parse_rd "(ab)c"       |> print; *)
+    (* parse_rd "a(bc)"       |> print; *)
+    (* parse_rd "(a|)b"       |> print; *)
+    (* parse_rd "(|a)b"       |> print; *)
+    (* parse_rd "(a||)b"      |> print; *)
+    ()
