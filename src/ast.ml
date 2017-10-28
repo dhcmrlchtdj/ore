@@ -19,4 +19,4 @@ let rec to_string2 = function
     | Character c -> Printf.sprintf "%s" (Char.escaped c)
     | Epsilon -> "_"
 
-let print r = print_endline (to_string r)
+let print r = print_endline (to_string2 r)

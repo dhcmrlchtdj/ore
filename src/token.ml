@@ -7,9 +7,9 @@ type token =
     | Close
 
 let precedence = function
-    | Open -> 0
-    | Close -> 0
     | Ch _ -> 0
+    | Open -> 0
+    | Close -> 9
     | Repeat -> 3
     | Concat -> 2
     | Alter -> 1

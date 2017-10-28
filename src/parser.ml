@@ -4,14 +4,14 @@ open Ast
 module T = Token
 
 (**
- * alternation  ::= concatenation '|' alternation
- *              ::= concatenation
- * concatenation    ::= repeation *
- * repeation    ::= atom '*'
- *              ::= atom
- * atom     ::= '(' alternation ')'
- *          ::= [a-zA-Z0-9]
- *          ::= Epsilon
+ * alternation = concatenation '|' alternation
+ *             | concatenation
+ * concatenation  = repeation *
+ * repeation = atom '*'
+ *           | atom
+ * atom = '(' alternation ')'
+ *      | [a-zA-Z0-9]
+ *      | Epsilon
 *)
 
 
@@ -54,45 +54,56 @@ let recursive_descent (input:string) : re =
 
 
 let shunting_yard (input:string) : re =
-    let rec consume_token (s:token list) (operators:token list) (operands:re list) (need_concat:bool) : re =
-        match s, operators with
+    let rec consume_input (input:token list) (operators:token list) (operands:re list) (need_concat:bool) : re =
+        match input, operators with
             | [], [] ->
-                (match operands with
-                    | [] -> Epsilon
-                    | [x] -> x
-                    | _ -> failwith "should not happen")
+                consume_operand input operators operands
             | [], _ ->
-                consume_operator s operators operands
+                consume_operator input operators operands
 
             | (Ch c)::t, _ ->
                 if need_concat
-                then consume_token (Concat::s) operators operands false
-                else consume_token t operators ((Character c)::operands) true
+                then consume_input input (Concat::operators) operands false
+                else consume_input t operators ((Character c)::operands) true
 
             | Open::t, _ ->
                 if need_concat
-                then consume_token (Concat::s) operators operands false
-                else consume_token t (Open::operators) operands false
-
+                then consume_input input (Concat::operators) operands false
+                else consume_input t (Open::operators) operands false
             | Close::t, Open::tt ->
-                consume_token t tt operands true
+                consume_input t tt operands true
             | Close::_, _ ->
-                consume_operator s operators operands
+                consume_operator input operators operands
 
             | h::t, [] ->
-                consume_token t (h::operators) operands false
+                consume_input t (h::operators) operands (h = Repeat)
             | h::t, hh::_ when (T.precedence h) >= (T.precedence hh) ->
-                consume_token t (h::operators) operands false
+                consume_input t (h::operators) operands (h = Repeat)
             | _::_, _::_ ->
-                consume_operator s operators operands
-    and consume_operator s operators operands =
+                consume_operator input operators operands
+    and consume_operator ts operators operands =
         match operators, operands with
+            | Alter::t, [] ->
+                consume_input ts t ((Alternation (Epsilon, Epsilon)) :: []) false
+            | Alter::t, x1::[] ->
+                consume_input ts t ((Alternation (Epsilon, x1)) :: []) false
             | Alter::t, x1::x2::rands ->
-                consume_token s t ((Alternation (x2, x1)) :: rands) false
+                consume_input ts t ((Alternation (x2, x1)) :: rands) false
             | Concat::t, x1::x2::rands ->
-                consume_token s t ((Concatenation (x2, x1)) :: rands) false
-            | Repeat::t, x::rands ->
-                consume_token s t ((Repeation x) :: rands) false
-            | _ -> failwith ""
+                consume_input ts t ((Concatenation (x2, x1)) :: rands) false
+            | Repeat::t, x1::rands ->
+                consume_input ts t ((Repeation x1) :: rands) false
+            | h::_, _ ->
+                failwith ("operator: should not happen, " ^ (T.to_string h))
+            | [], _ ->
+                failwith "operator: should not happen, empty"
+    and consume_operand _ _ (operands:re list) : re =
+        match operands with
+            | [] -> Epsilon
+            | [x] -> x
+            | _ ->
+                print_newline ();
+                (List.iter (Ast.print) operands);
+                failwith "operand: should not happen"
     in
-    consume_token (Lexer.scan input) [] [] false
+    consume_input (Lexer.scan input) [] [] false
