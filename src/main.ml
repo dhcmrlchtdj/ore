@@ -41,12 +41,17 @@ let _ =
         "ab(cd)ef";
         "(ab)cd";
 
+        "(a)*";
+        "(ab)*";
+        "(a*)*";
+
         "a|(b|c)*";
     ] in
     List.map (fun x ->
         Printf.printf "%10s\t" x;
-        Printf.printf "%35s\t" (Parser.recursive_descent x |> Ast.to_string2);
-        Printf.printf "%35s\t" (Parser.shunting_yard x |> Ast.to_string2);
-        Printf.printf "%B\t" ((Parser.shunting_yard x) = (Parser.recursive_descent x));
+        Printf.printf "%35s\t" (Parser.recursive_descent x |> Ast.to_string);
+        (* Printf.printf "%35s\t" (Parser.recursive_descent x |> Ast.simplify |> Ast.to_string); *)
+        (* Printf.printf "%35s\t" (Parser.shunting_yard x |> Ast.to_string); *)
+        (* Printf.printf "%B\t" ((Parser.shunting_yard x |> Ast.simplify) = (Parser.recursive_descent x |> Ast.simplify)); *)
         print_newline ()
     ) cases

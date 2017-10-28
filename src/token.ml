@@ -1,23 +1,29 @@
 type token =
     | Concat
     | Alter
-    | Repeat
+    | Star
+    | Plus
+    | Question
     | Ch of char
-    | Open
-    | Close
+    | LeftParen
+    | RightParen
 
 let precedence = function
     | Ch _ -> 0
-    | Open -> 0
-    | Close -> 9
-    | Repeat -> 3
+    | LeftParen -> 0
+    | RightParen -> 9
+    | Star -> 3
+    | Plus -> 3
+    | Question -> 3
     | Concat -> 2
     | Alter -> 1
 
 let to_string = function
-    | Concat -> "++"
+    | Concat -> "^"
     | Alter -> "|"
-    | Repeat -> "*"
+    | Star -> "*"
+    | Plus -> "+"
+    | Question -> "?"
     | Ch c -> Char.escaped c
-    | Open -> "("
-    | Close -> ")"
+    | LeftParen -> "("
+    | RightParen -> ")"

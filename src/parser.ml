@@ -8,13 +8,13 @@ module T = Token
  *             | concatenation
  * concatenation  = repeation *
  * repeation = atom '*'
+ *           | atom '+'
+ *           | atom '?'
  *           | atom
  * atom = '(' alternation ')'
  *      | [a-zA-Z0-9]
  *      | Epsilon
 *)
-
-
 let recursive_descent (input:string) : re =
     let rec parse_alternation (ts:token list) : (re * (token list)) =
         let (r1, ts1) = parse_concatenation ts in
@@ -27,26 +27,29 @@ let recursive_descent (input:string) : re =
     and parse_concatenation (ts:token list) : (re * (token list)) =
         let (r1, ts1) = parse_repeation ts in
         match ts1 with
-            | (Ch _)::_ | Open::_ ->
+            | (Ch _)::_ | LeftParen::_ ->
                 let (r2, ts2) = parse_concatenation ts1 in
                 (Concatenation (r1, r2), ts2)
             | _ -> (r1, ts1)
     and parse_repeation (ts:token list) : (re * (token list)) =
         let (r1, ts1) = parse_atom ts in
         match ts1 with
-            | Repeat::t -> (Repeation r1, t)
+            | Star::t -> (RepeationStar r1, t)
+            | Plus::t -> (RepeationPlus r1, t)
+            | Question::t -> (RepeationQuestion r1, t)
             | _ -> (r1, ts1)
     and parse_atom (ts:token list) : (re * (token list)) =
         match ts with
-            | [] | Alter::_ | Close::_ -> (Epsilon, ts)
-            | Open::t ->
+            | [] | Alter::_ | RightParen::_ -> (Epsilon, ts)
+            | LeftParen::t ->
                 let (r1, ts1) = parse_alternation t in
                 (match ts1 with
-                    | Close::t -> (r1, t)
+                    | RightParen::t -> (r1, t)
                     | h::_ -> failwith ("atom: should ) but " ^ (T.to_string h))
                     | [] -> failwith "atom: should ) but END")
             | (Ch c)::t -> (Character c, t)
-            | Concat::_ | Repeat::_ -> failwith "atom: should never happen"
+            | Concat::_ | Star::_ | Plus::_ | Question::_ ->
+                failwith "atom: should never happen"
     in
     match parse_alternation (Lexer.scan input) with
         | r, [] -> r
@@ -59,40 +62,44 @@ let shunting_yard (input:string) : re =
             | [], [] ->
                 consume_operand input operators operands
             | [], _ ->
-                consume_operator input operators operands
+                consume_operator input operators operands false
 
             | (Ch c)::t, _ ->
                 if need_concat
-                then consume_input input (Concat::operators) operands false
+                then consume_input (Concat::input) operators operands false
                 else consume_input t operators ((Character c)::operands) true
 
-            | Open::t, _ ->
+            | LeftParen::t, _ ->
                 if need_concat
-                then consume_input input (Concat::operators) operands false
-                else consume_input t (Open::operators) operands false
-            | Close::t, Open::tt ->
+                then consume_input (Concat::input) operators operands false
+                else consume_input t (LeftParen::operators) operands false
+            | RightParen::t, LeftParen::tt ->
                 consume_input t tt operands true
-            | Close::_, _ ->
-                consume_operator input operators operands
+            | RightParen::_, _ ->
+                consume_operator input operators operands false
 
             | h::t, [] ->
-                consume_input t (h::operators) operands (h = Repeat)
+                consume_input t (h::operators) operands (is_repeation h)
             | h::t, hh::_ when (T.precedence h) >= (T.precedence hh) ->
-                consume_input t (h::operators) operands (h = Repeat)
-            | _::_, _::_ ->
-                consume_operator input operators operands
-    and consume_operator ts operators operands =
+                consume_input t (h::operators) operands (is_repeation h)
+            | h::_, _::_ ->
+                consume_operator input operators operands (is_repeation h)
+    and consume_operator ts operators operands need_concat =
         match operators, operands with
             | Alter::t, [] ->
-                consume_input ts t ((Alternation (Epsilon, Epsilon)) :: []) false
+                consume_input ts t ((Alternation (Epsilon, Epsilon)) :: []) need_concat
             | Alter::t, x1::[] ->
-                consume_input ts t ((Alternation (Epsilon, x1)) :: []) false
+                consume_input ts t ((Alternation (Epsilon, x1)) :: []) need_concat
             | Alter::t, x1::x2::rands ->
-                consume_input ts t ((Alternation (x2, x1)) :: rands) false
+                consume_input ts t ((Alternation (x2, x1)) :: rands) need_concat
             | Concat::t, x1::x2::rands ->
-                consume_input ts t ((Concatenation (x2, x1)) :: rands) false
-            | Repeat::t, x1::rands ->
-                consume_input ts t ((Repeation x1) :: rands) false
+                consume_input ts t ((Concatenation (x2, x1)) :: rands) need_concat
+            | Star::t, x1::rands ->
+                consume_input ts t ((RepeationStar x1) :: rands) need_concat
+            | Plus::t, x1::rands ->
+                consume_input ts t ((RepeationPlus x1) :: rands) need_concat
+            | Question::t, x1::rands ->
+                consume_input ts t ((RepeationQuestion x1) :: rands) need_concat
             | h::_, _ ->
                 failwith ("operator: should not happen, " ^ (T.to_string h))
             | [], _ ->
@@ -105,5 +112,59 @@ let shunting_yard (input:string) : re =
                 print_newline ();
                 (List.iter (Ast.print) operands);
                 failwith "operand: should not happen"
+    and is_repeation = function
+        | Star | Plus | Question -> true
+        | _ -> false
     in
     consume_input (Lexer.scan input) [] [] false
+
+
+(**
+ *
+ * alternation = concatenation '|' alternation
+ *             | concatenation
+ * concatenation  = repeation *
+ * repeation = atom '*'
+ *           | atom
+ * atom = '(' alternation ')'
+ *      | [a-zA-Z0-9]
+ *      | Epsilon
+ *
+ *
+ * e0 = e_alter
+ * e_alter = e_concat
+ *         | e_alter "|" e_concat
+ * e_concat = e_repeat
+ *          | e_repeat
+ * e_repeat = e_atom "*"
+ * e_atom = "(" e0 ")"
+ *        | [a-zA-Z0-9]
+ *        | Epsilon
+ *
+ * S --> E0 end
+ * E0 --> E10
+ * E10 --> E20 | E20 "=" E20
+ * E20 --> E30 | E20 "+" E30 | E20 "-" E30
+ * E30 --> E40 | E30 "*" E40 | E30 "/" E40
+ * E40 --> E50 | E40 "!"
+ * E50 --> E60 | E60 "^" E50
+ * E50 --> P
+ * P --> "-" E30 | "(" E0 ")" | v
+*)
+let precedence_climbing (input:string) : re =
+    let rec aux (prev_op:int) (ts:token list) : (re * (token list)) =
+        (Epsilon, [])
+        (* match ts with *)
+        (* | [] -> *)
+        (* (Epsilon, []) *)
+        (* | h::t when (T.precedence h) > prev_op -> *)
+        (* let (r1, ts1) = aux (T.precedence h) t in *)
+        (* (r1, ts1) *)
+
+    in
+    match aux (-1) (Lexer.scan input) with
+        | r, [] -> r
+        | _ -> failwith "not end"
+
+
+let pratt (input:string) : re = Epsilon
