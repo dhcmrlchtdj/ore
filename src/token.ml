@@ -8,6 +8,13 @@ type token =
     | LeftParen
     | RightParen
 
+let is_postfix = function
+    | Star | Plus | Question -> true
+    | _ -> false
+let is_infix = function
+    | Concat | Alter -> true
+    | _ -> false
+
 let precedence = function
     | Ch _ -> 0
     | LeftParen -> 0

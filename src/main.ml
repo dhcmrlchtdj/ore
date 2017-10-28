@@ -53,5 +53,7 @@ let _ =
         (* Printf.printf "%35s\t" (Parser.recursive_descent x |> Ast.simplify |> Ast.to_string); *)
         (* Printf.printf "%35s\t" (Parser.shunting_yard x |> Ast.to_string); *)
         (* Printf.printf "%B\t" ((Parser.shunting_yard x |> Ast.simplify) = (Parser.recursive_descent x |> Ast.simplify)); *)
+        Printf.printf "%35s\t" (Parser.precedence_climbing x |> Ast.to_string);
+        Printf.printf "%B\t" ((Parser.precedence_climbing x |> Ast.simplify) = (Parser.recursive_descent x |> Ast.simplify));
         print_newline ()
     ) cases

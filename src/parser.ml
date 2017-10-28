@@ -41,13 +41,13 @@ let recursive_descent (input:string) : re =
     and parse_atom (ts:token list) : (re * (token list)) =
         match ts with
             | [] | Alter::_ | RightParen::_ -> (Epsilon, ts)
+            | (Ch c)::t -> (Character c, t)
             | LeftParen::t ->
                 let (r1, ts1) = parse_alternation t in
                 (match ts1 with
                     | RightParen::t -> (r1, t)
                     | h::_ -> failwith ("atom: should ) but " ^ (T.to_string h))
                     | [] -> failwith "atom: should ) but END")
-            | (Ch c)::t -> (Character c, t)
             | Concat::_ | Star::_ | Plus::_ | Question::_ ->
                 failwith "atom: should never happen"
     in
@@ -120,51 +120,34 @@ let shunting_yard (input:string) : re =
 
 
 (**
- *
- * alternation = concatenation '|' alternation
- *             | concatenation
- * concatenation  = repeation *
- * repeation = atom '*'
- *           | atom
- * atom = '(' alternation ')'
- *      | [a-zA-Z0-9]
- *      | Epsilon
- *
- *
- * e0 = e_alter
+ * s = e_alter
  * e_alter = e_concat
  *         | e_alter "|" e_concat
  * e_concat = e_repeat
- *          | e_repeat
- * e_repeat = e_atom "*"
- * e_atom = "(" e0 ")"
- *        | [a-zA-Z0-9]
- *        | Epsilon
- *
- * S --> E0 end
- * E0 --> E10
- * E10 --> E20 | E20 "=" E20
- * E20 --> E30 | E20 "+" E30 | E20 "-" E30
- * E30 --> E40 | E30 "*" E40 | E30 "/" E40
- * E40 --> E50 | E40 "!"
- * E50 --> E60 | E60 "^" E50
- * E50 --> P
- * P --> "-" E30 | "(" E0 ")" | v
+ *          | e_concat e_repeat
+ * e_repeat = p "*" | p "+" | p "?"
+ * p = "(" e0 ")"
+ *   | [a-zA-Z0-9]
+ *   | Epsilon
 *)
 let precedence_climbing (input:string) : re =
     let rec aux (prev_op:int) (ts:token list) : (re * (token list)) =
-        (Epsilon, [])
-        (* match ts with *)
-        (* | [] -> *)
-        (* (Epsilon, []) *)
-        (* | h::t when (T.precedence h) > prev_op -> *)
-        (* let (r1, ts1) = aux (T.precedence h) t in *)
-        (* (r1, ts1) *)
+        match ts with
+            | [] -> (Epsilon, [])
 
+            | (Ch c)::[] -> (Character c, [])
+            | (Ch c)::((Ch _)::_ as t)
+            | (Ch c)::((LeftParen::_) as t) ->
+                let (r1, ts1) = aux (T.precedence (Ch c)) t in
+                (Concatenation (Character c, r1), ts1)
+
+            | h::t when (T.precedence h) > prev_op ->
+                let (r1, ts1) = aux (T.precedence h) t in
+                (r1, ts1)
     in
     match aux (-1) (Lexer.scan input) with
         | r, [] -> r
         | _ -> failwith "not end"
 
 
-let pratt (input:string) : re = Epsilon
+(* let pratt (input:string) : re = Epsilon *)

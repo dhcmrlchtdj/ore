@@ -1,19 +1,22 @@
 open Token
 
+let explode s =
+    let rec exp i l =
+        if i < 0
+        then l
+        else exp (i - 1) (s.[i] :: l) in
+    exp (String.length s - 1) []
+
 let scan (input:string) : token list =
-    let rec aux cs ts =
-        match Stream.peek cs with
-            | None -> List.rev ts
-            | Some c -> (
-                    Stream.junk cs;
-                    match c with
-                        | '(' -> aux cs (LeftParen::ts)
-                        | ')' -> aux cs (RightParen::ts)
-                        | '*' -> aux cs (Star::ts)
-                        | '+' -> aux cs (Plus::ts)
-                        | '?' -> aux cs (Question::ts)
-                        | '|' -> aux cs (Alter::ts)
-                        | _ -> aux cs ((Ch c)::ts)
-                )
+    let rec aux (cs:char list) (ts:token list) : token list =
+        match cs with
+            | [] -> List.rev ts
+            | '(' :: t -> aux t (LeftParen :: ts)
+            | ')' :: t -> aux t (RightParen :: ts)
+            | '*' :: t -> aux t (Star :: ts)
+            | '+' :: t -> aux t (Plus :: ts)
+            | '?' :: t -> aux t (Question :: ts)
+            | '|' :: t -> aux t (Alter :: ts)
+            | c :: t -> aux t ((Ch c) :: ts)
     in
-    aux (Stream.of_string input) []
+    aux (explode input) []
