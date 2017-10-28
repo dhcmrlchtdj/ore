@@ -7,6 +7,9 @@ OCB := ocamlbuild $(OCB_FLAGS)
 
 mlis := $(patsubst %.ml,%,$(wildcard src/*.ml))
 
+test: main
+	./main.byte
+
 main: $(mlis)
 	@$(OCB) src/main.byte
 
@@ -16,4 +19,4 @@ $(mlis):
 clean:
 	@ocamlbuild -clean
 
-.PHONY: main clean $(mlis)
+.PHONY: test main clean $(mlis)
