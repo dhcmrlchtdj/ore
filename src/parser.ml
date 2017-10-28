@@ -19,13 +19,11 @@ let recursive_descent (input:string) : re =
     let rec parse_alternation (ts:token list) : (re * (token list)) =
         let (r1, ts1) = parse_concatenation ts in
         match ts1 with
-            | [] -> (r1, [])
-            | Close::_ -> (r1, ts1)
             | Alter::t ->
                 let (r2, ts2) = parse_alternation t in
                 let r3 = Alternation (r1, r2) in
                 (r3, ts2)
-            | h::_ -> failwith ("alternation: " ^ (Token.to_string h))
+            | _ -> (r1, ts1)
     and parse_concatenation (ts:token list) : (re * (token list)) =
         let (r1, ts1) = parse_repeation ts in
         match ts1 with
