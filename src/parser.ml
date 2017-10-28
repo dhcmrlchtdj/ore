@@ -15,44 +15,57 @@ let rec to_string = function
     | Epsilon -> ""
 let print r = print_endline (to_string r)
 
+(**
+ * alternation  ::= concatenation '|' alternation
+ *              ::= concatenation
+ * concatenation    ::= concatenation *
+ *                  ::= repeation
+ * repeation    ::= atom '*'
+ *              ::= atom
+ * atom     ::= '(' alternation ')'
+ *          ::= [a-zA-Z0-9]
+ *          ::= Epsilon
+*)
 let parse_rd (input:string) : re =
+    let is_alphanum = function
+        | 'a'..'z' | 'A'..'Z' | '0'..'9' -> true
+        | _ -> false
+    in
     let rec parse_alternation s : re =
         let r = parse_concatenation s in
         match S.peek s with
-            | None -> r
-            | Some ')' ->
-                S.junk s;
-                r
             | Some '|' ->
                 S.junk s;
                 let r2 = parse_alternation s in
                 Alternation (r, r2)
-            | Some _ -> failwith "concat"
+            | _ -> r
     and parse_concatenation s : re =
         let r = parse_repeation s in
         match S.peek s with
-            | None -> r
-            | Some '|' | Some ')' -> r
-            | Some _ ->
+            | Some c when c = '(' || (is_alphanum c) ->
                 let r2 = parse_concatenation s in
                 Concatenation (r, r2)
+            | _ -> r
     and parse_repeation s : re =
         let r = parse_atom s in
         match S.peek s with
-            | None -> r
             | Some '*' ->
                 S.junk s;
                 Repeation r
-            | Some _ -> r
+            | _ -> r
     and parse_atom s : re =
         match S.peek s with
-            | None -> Epsilon
             | Some '(' ->
                 S.junk s;
-                parse_alternation s
-            | Some c ->
+                let r = parse_alternation s in
+                (match S.peek s with
+                    | Some ')' -> r
+                    | _ -> failwith "err")
+            | Some c when is_alphanum c ->
                 S.junk s;
                 Letter c
+            | Some c -> Epsilon
+            | None -> Epsilon
     in
     parse_alternation (S.of_string input)
 
@@ -130,18 +143,18 @@ let parse_shunting_yard (input:string) : re =
     consume_token (to_tokens input) [] [] false
 
 let _ =
-    (* parse_rd ""            |> print; *)
-    (* parse_rd "a"           |> print; *)
-    (* parse_rd "abc"         |> print; *)
-    (* parse_rd "a|b"         |> print; *)
-    (* parse_rd "a|b|c"       |> print; *)
-    (* parse_rd "a|"          |> print; *)
-    (* parse_rd "|b"          |> print; *)
-    (* parse_rd "|"           |> print; *)
-    (* parse_rd "||"          |> print; *)
-    (* parse_rd "(ab)c"       |> print; *)
-    (* parse_rd "a(bc)"       |> print; *)
-    (* parse_rd "(a|)b"       |> print; *)
-    (* parse_rd "(|a)b"       |> print; *)
-    (* parse_rd "(a||)b"      |> print; *)
+    parse_rd ""            |> print;
+    parse_rd "a"           |> print;
+    parse_rd "abc"         |> print;
+    parse_rd "a|b"         |> print;
+    parse_rd "a|b|c"       |> print;
+    parse_rd "a|"          |> print;
+    parse_rd "|b"          |> print;
+    parse_rd "|"           |> print;
+    parse_rd "||"          |> print;
+    parse_rd "(ab)c"       |> print;
+    parse_rd "a(bc)"       |> print;
+    parse_rd "(a|)b"       |> print;
+    parse_rd "(|a)b"       |> print;
+    parse_rd "(a||)b"      |> print;
     ()
