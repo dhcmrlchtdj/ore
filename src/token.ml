@@ -18,14 +18,14 @@ let is_infix = function
     | _ -> false
 
 let precedence = function
-    | Ch _ -> 0
-    | LeftParen -> 0
-    | RightParen -> 9
-    | Star -> 3
-    | Plus -> 3
-    | Question -> 3
-    | Concat -> 2
-    | Alter -> 1
+    | Ch _ -> -10
+    | LeftParen -> -10
+    | RightParen -> -10
+    | Star -> 30
+    | Plus -> 30
+    | Question -> 30
+    | Concat -> 20
+    | Alter -> 10
 
 let to_string = function
     | Concat -> "^"

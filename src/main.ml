@@ -40,6 +40,7 @@ let () =
         "(a)(b)";
         "(ab)(cd)";
         "(a)bc";
+        "a(b)";
         "ab(cd)";
         "ab(cd)ef";
         "(ab)cd";
@@ -52,9 +53,11 @@ let () =
 
         "(a)*";
         "(ab)*";
-        "(a*)*";
-        "(ab*)*cd";
+        "(a+)*";
+        "(ab+)*cd";
         "ab(c*d)e";
+        "(a*)*";
+        "a(b*c)*";
 
         "a(b|c)*";
     ] in
@@ -62,8 +65,9 @@ let () =
         let f1 = Parser.recursive_descent in
         let x = (try f1 case |> Ast.to_string with Failure s -> s) in
         let y = (try f2 case |> Ast.to_string with Failure s -> s) in
-        Printf.printf "%15s \t %45s \t %45s \t %B\n" case x y ((f1 case |> Ast.simplify) = (f2 case |> Ast.simplify))
+        Printf.printf "%15s \t %45s \t %45s \t %B\n" case x y
+            ((f1 case |> Ast.simplify) = (f2 case |> Ast.simplify))
     in
-    List.iter (test Parser.shunting_yard) cases;
-    (* List.iter (test Parser.precedence_climbing) cases; *)
+    (* List.iter (test Parser.shunting_yard) cases; *)
+    List.iter (test Parser.precedence_climbing) cases;
     ()

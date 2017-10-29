@@ -1,5 +1,6 @@
+# regular expression
 
-- x
+- syntax
     - infix: `ab` `a|b`
     - postfix: `a*` `a+` `?`
     - group: `(a)`
