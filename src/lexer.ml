@@ -7,6 +7,29 @@ let explode s =
         else exp (i - 1) (s.[i] :: l) in
     exp (String.length s - 1) []
 
+let right_allow_concat = function
+    | Concat -> false
+    | Alter -> false
+    | Question | Plus | Star -> true
+    | Ch _ -> true
+    | LeftParen -> false
+    | RightParen -> true
+and left_allow_concat = function
+    | Concat -> false
+    | Alter -> false
+    | Question | Plus | Star -> false
+    | Ch _ -> true
+    | LeftParen -> true
+    | RightParen -> false
+let rec insert_concat (tokens:token list) : token list =
+    match tokens with
+        | [] | [_] ->
+            tokens
+        | x::y::z when (right_allow_concat x) && (left_allow_concat y) ->
+            x :: Concat :: (insert_concat (y::z))
+        | h::t ->
+            h :: (insert_concat t)
+
 let scan (input:string) : token list =
     let rec aux (cs:char list) (ts:token list) : token list =
         match cs with
@@ -20,3 +43,4 @@ let scan (input:string) : token list =
             | c :: t -> aux t ((Ch c) :: ts)
     in
     aux (explode input) []
+    |> insert_concat

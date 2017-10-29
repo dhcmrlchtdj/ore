@@ -11,6 +11,8 @@ type token =
 let is_postfix = function
     | Star | Plus | Question -> true
     | _ -> false
+
+(* all right associativity *)
 let is_infix = function
     | Concat | Alter -> true
     | _ -> false
