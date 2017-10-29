@@ -1,4 +1,4 @@
-let _ =
+let () =
     let cases = [
         "";
         "a";
@@ -18,19 +18,21 @@ let _ =
         "a|b";
         "a|b|c";
         "ab|cd";
-        "|";
-        "ab|";
-        "|ab";
-        "||";
-        "ab||";
-        "|ab|";
-        "||ab";
+        "ab|cd|ef";
+        (* "|"; *)
+        (* "ab|"; *)
+        (* "|ab"; *)
+        (* "||"; *)
+        (* "ab||"; *)
+        (* "|ab|"; *)
+        (* "||ab"; *)
 
         "a*|b*";
         "a*|b*c";
         "a*|bc";
         "a*b|c*d";
         "ab*|c*d";
+        "ab*|c*d|ef*";
 
         "()";
         "(a)";
@@ -44,16 +46,15 @@ let _ =
         "(a)*";
         "(ab)*";
         "(a*)*";
+        "(ab*)*ab";
 
-        "a|(b|c)*";
+        "a(b|c)*";
     ] in
-    List.map (fun x ->
-        Printf.printf "%10s\t" x;
-        Printf.printf "%35s\t" (Parser.recursive_descent x |> Ast.to_string);
-        (* Printf.printf "%35s\t" (Parser.recursive_descent x |> Ast.simplify |> Ast.to_string); *)
-        (* Printf.printf "%35s\t" (Parser.shunting_yard x |> Ast.to_string); *)
-        (* Printf.printf "%B\t" ((Parser.shunting_yard x |> Ast.simplify) = (Parser.recursive_descent x |> Ast.simplify)); *)
-        Printf.printf "%35s\t" (Parser.precedence_climbing x |> Ast.to_string);
-        Printf.printf "%B\t" ((Parser.precedence_climbing x |> Ast.simplify) = (Parser.recursive_descent x |> Ast.simplify));
-        print_newline ()
-    ) cases
+    let test fn case =
+        let rd = Parser.recursive_descent case |> Ast.to_string in
+        let s = (try fn case |> Ast.to_string with Failure s -> s) in
+        Printf.printf "%15s \t %45s \t %45s \t %B\n" case rd s (rd = s)
+    in
+    List.iter (test Parser.shunting_yard) cases;
+    (* List.iter (test Parser.precedence_climbing) cases; *)
+    ()
