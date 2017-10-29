@@ -128,16 +128,17 @@ let precedence_climbing (input:string) : re =
         match t1 with
             | [] -> r1, []
             | h::t when (precedence h) >= prec ->
-                if is_postfix h
-                then (
-                    let r2 = postfix h r1 in
-                    parse_expr t (Some r2) prec
-                )
-                else (
-                    let r2, t2 = parse_expr t None (precedence h) in
-                    let r3 = infix h r1 r2 in
-                    parse_expr t2 (Some r3) prec
-                )
+                (match h with
+                    | Concat | Alter -> (
+                            let r2, t2 = parse_expr t None (precedence h) in
+                            let r3 = infix h r1 r2 in
+                            parse_expr t2 (Some r3) prec
+                        )
+                    | Star | Plus | Question -> (
+                            let r2 = postfix h r1 in
+                            parse_expr t (Some r2) prec
+                        )
+                    | _ -> failwith "err")
             | _::_ ->
                 r1, t1
 
@@ -175,4 +176,5 @@ let precedence_climbing (input:string) : re =
         | _ -> failwith "precedence_climbing unexpected"
 
 
-(* let pratt (input:string) : re = Epsilon *)
+let pratt (input:string) : re =
+    Epsilon

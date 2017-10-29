@@ -69,5 +69,6 @@ let () =
             ((f1 case |> Ast.simplify) = (f2 case |> Ast.simplify))
     in
     (* List.iter (test Parser.shunting_yard) cases; *)
-    List.iter (test Parser.precedence_climbing) cases;
+    (* List.iter (test Parser.precedence_climbing) cases; *)
+    List.iter (test Parser.pratt) cases;
     ()

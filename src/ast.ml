@@ -16,8 +16,6 @@ let rec to_string = function
     | Character c -> Printf.sprintf "%s" (Char.escaped c)
     | Epsilon -> "_"
 
-let print r = print_endline (to_string r)
-
 let rec simplify = function
     | Concatenation (r1, r2) -> (
             match simplify r1, simplify r2 with

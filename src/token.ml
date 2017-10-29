@@ -8,14 +8,15 @@ type token =
     | LeftParen
     | RightParen
 
-let is_postfix = function
-    | Star | Plus | Question -> true
-    | _ -> false
-
-(* all right associativity *)
-let is_infix = function
-    | Concat | Alter -> true
-    | _ -> false
+let to_string = function
+    | Concat -> "^"
+    | Alter -> "|"
+    | Star -> "*"
+    | Plus -> "+"
+    | Question -> "?"
+    | Ch c -> Char.escaped c
+    | LeftParen -> "("
+    | RightParen -> ")"
 
 let precedence = function
     | Ch _ -> -10
@@ -26,13 +27,3 @@ let precedence = function
     | Question -> 30
     | Concat -> 20
     | Alter -> 10
-
-let to_string = function
-    | Concat -> "^"
-    | Alter -> "|"
-    | Star -> "*"
-    | Plus -> "+"
-    | Question -> "?"
-    | Ch c -> Char.escaped c
-    | LeftParen -> "("
-    | RightParen -> ")"
