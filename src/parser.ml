@@ -177,4 +177,70 @@ let precedence_climbing (input:string) : re =
 
 
 let pratt (input:string) : re =
-    Epsilon
+    let rec parse_expr (behind:re option) (prec:int) (ts:token list) : (re * (token list)) =
+        match behind with
+            | None -> parse_prefix prec ts
+            | Some exp -> parse_infix exp prec ts
+    and parse_prefix (prec:int) (ts:token list) : (re * (token list)) =
+        match ts with
+            | [] -> (Epsilon, [])
+            | RightParen::_ -> (Epsilon, ts)
+            | Alter::_ -> parse_expr (Some (Epsilon)) prec ts
+
+            | (Ch c)::t ->
+                parse_expr (Some (Character c)) prec t
+            | LeftParen::t ->
+                let (exp, tt) = (
+                    match parse_expr None 0 t with
+                        | exp, RightParen::tt -> (exp, tt)
+                        | _ -> failwith "unmatched `)`"
+                ) in
+                parse_expr (Some exp) prec tt
+
+            | _ -> failwith "None: unexpected"
+    and parse_infix (exp:re) (prec:int) (ts:token list) : (re * (token list)) =
+        match ts with
+            | [] -> (exp, [])
+            | RightParen::_ -> (exp, ts)
+
+            | h::t when is_postfix h ->
+                if prec < precedence h
+                then (
+                    let e = build_postfix h exp in
+                    parse_expr (Some e) prec t
+                ) else (
+                    (exp, ts)
+                )
+
+            | h::t when is_infix_right h ->
+                if prec <= precedence h
+                then (
+                    let (e2, tt) = parse_expr None (precedence h) t in
+                    let e = build_infix h exp e2 in
+                    parse_expr (Some e) prec tt
+                ) else (
+                    (exp, ts)
+                )
+
+            | _ -> failwith "Some: unexpected"
+    and is_postfix = function
+        | Star | Plus | Question -> true
+        | _ -> false
+    and is_infix_right = function
+        | Alter | Concat -> true
+        | _ -> false
+    and build_postfix op exp =
+        match op with
+            | Star -> RepeationStar exp
+            | Plus -> RepeationPlus exp
+            | Question -> RepeationQuestion exp
+            | _ -> failwith "never"
+    and build_infix op left right =
+        match op with
+            | Alter -> Alternation (left, right)
+            | Concat -> Concatenation (left, right)
+            | _ -> failwith "never"
+    in
+    match parse_expr None 0 (Lexer.scan input) with
+        | r, [] -> r
+        | _ -> failwith "pratt unexpected"

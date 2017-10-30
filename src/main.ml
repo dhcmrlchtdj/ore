@@ -65,8 +65,9 @@ let () =
         let f1 = Parser.recursive_descent in
         let x = (try f1 case |> Ast.to_string with Failure s -> s) in
         let y = (try f2 case |> Ast.to_string with Failure s -> s) in
-        Printf.printf "%15s \t %45s \t %45s \t %B\n" case x y
-            ((f1 case |> Ast.simplify) = (f2 case |> Ast.simplify))
+        let xx = (try f1 case |> Ast.simplify |> Ast.to_string with Failure s -> s) in
+        let yy = (try f2 case |> Ast.simplify |> Ast.to_string with Failure s -> s) in
+        Printf.printf "%15s \t %45s \t %45s \t %B\n" case x y (xx=yy)
     in
     (* List.iter (test Parser.shunting_yard) cases; *)
     (* List.iter (test Parser.precedence_climbing) cases; *)
