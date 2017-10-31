@@ -8,8 +8,6 @@ open Ast
  * concatenation = repeation '^' concatenation
  *               | repeation
  * repeation = atom '*'
- *           | atom '+'
- *           | atom '?'
  *           | atom
  * atom = '(' alternation ')'
  *      | [a-zA-Z0-9]
@@ -40,9 +38,7 @@ let recursive_descent (input:string) : re =
     and parse_repeation (ts:token list) : (re * (token list)) =
         let (r1, ts1) = parse_atom ts in
         match ts1 with
-            | Star::t -> (RepeationStar r1, t)
-            | Plus::t -> (RepeationPlus r1, t)
-            | Question::t -> (RepeationQuestion r1, t)
+            | Repeat::t -> (Repeation r1, t)
             | _ -> (r1, ts1)
 
     and parse_atom (ts:token list) : (re * (token list)) =
@@ -100,12 +96,8 @@ let shunting_yard (input:string) : re =
                 consume_input ts t ((Alternation (x2, x1)) :: rands)
             | Concat::t, x1::x2::rands ->
                 consume_input ts t ((Concatenation (x2, x1)) :: rands)
-            | Star::t, x1::rands ->
-                consume_input ts t ((RepeationStar x1) :: rands)
-            | Plus::t, x1::rands ->
-                consume_input ts t ((RepeationPlus x1) :: rands)
-            | Question::t, x1::rands ->
-                consume_input ts t ((RepeationQuestion x1) :: rands)
+            | Repeat::t, x1::rands ->
+                consume_input ts t ((Repeation x1) :: rands)
             | h::_, _ ->
                 failwith ("operator: should not happen, " ^ (Token.to_string h))
             | [], _ ->
@@ -134,7 +126,7 @@ let precedence_climbing (input:string) : re =
                             let r3 = infix h r1 r2 in
                             parse_expr t2 (Some r3) prec
                         )
-                    | Star | Plus | Question -> (
+                    | Repeat -> (
                             let r2 = postfix h r1 in
                             parse_expr t (Some r2) prec
                         )
@@ -165,9 +157,7 @@ let precedence_climbing (input:string) : re =
 
     and postfix token exp =
         match token with
-            | Star -> RepeationStar exp
-            | Plus -> RepeationPlus exp
-            | Question -> RepeationQuestion exp
+            | Repeat -> Repeation exp
             | _ -> failwith "never"
 
     in
@@ -224,16 +214,14 @@ let pratt (input:string) : re =
 
             | _ -> failwith "Some: unexpected"
     and is_postfix = function
-        | Star | Plus | Question -> true
+        | Repeat -> true
         | _ -> false
     and is_infix_right = function
         | Alter | Concat -> true
         | _ -> false
     and build_postfix op exp =
         match op with
-            | Star -> RepeationStar exp
-            | Plus -> RepeationPlus exp
-            | Question -> RepeationQuestion exp
+            | Repeat -> Repeation exp
             | _ -> failwith "never"
     and build_infix op left right =
         match op with

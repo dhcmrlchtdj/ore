@@ -10,14 +10,14 @@ let explode s =
 let right_allow_concat = function
     | Concat -> false
     | Alter -> false
-    | Question | Plus | Star -> true
+    | Repeat -> true
     | Ch _ -> true
     | LeftParen -> false
     | RightParen -> true
 and left_allow_concat = function
     | Concat -> false
     | Alter -> false
-    | Question | Plus | Star -> false
+    | Repeat -> false
     | Ch _ -> true
     | LeftParen -> true
     | RightParen -> false
@@ -36,9 +36,7 @@ let scan (input:string) : token list =
             | [] -> List.rev ts
             | '(' :: t -> aux t (LeftParen :: ts)
             | ')' :: t -> aux t (RightParen :: ts)
-            | '*' :: t -> aux t (Star :: ts)
-            | '+' :: t -> aux t (Plus :: ts)
-            | '?' :: t -> aux t (Question :: ts)
+            | '*' :: t -> aux t (Repeat :: ts)
             | '|' :: t -> aux t (Alter :: ts)
             | c :: t -> aux t ((Ch c) :: ts)
     in
