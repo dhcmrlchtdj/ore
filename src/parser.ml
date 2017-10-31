@@ -146,8 +146,7 @@ let precedence_climbing (input:string) : re =
                     | [] -> failwith "precedence_climbing: atom: should ) but END")
             | RightParen::_ -> (Epsilon, ts)
             | Alter::_ -> (Epsilon, ts)
-            | _ ->
-                failwith "precedence_climbing: atom: should never happen"
+            | _ -> failwith "precedence_climbing: atom: should never happen"
 
     and infix token left right =
         match token with
@@ -169,65 +168,56 @@ let precedence_climbing (input:string) : re =
 let pratt (input:string) : re =
     let rec parse_expr (behind:re option) (prec:int) (ts:token list) : (re * (token list)) =
         match behind with
-            | None -> parse_prefix prec ts
-            | Some exp -> parse_infix exp prec ts
-    and parse_prefix (prec:int) (ts:token list) : (re * (token list)) =
+            | None -> parse_prefix_like prec ts
+            | Some exp -> parse_infix_like exp prec ts
+    and parse_prefix_like (prec:int) (ts:token list) : (re * (token list)) =
         match ts with
             | [] -> (Epsilon, [])
             | RightParen::_ -> (Epsilon, ts)
-            | Alter::_ -> parse_expr (Some (Epsilon)) prec ts
-
-            | (Ch c)::t ->
-                parse_expr (Some (Character c)) prec t
-            | LeftParen::t ->
-                let (exp, tt) = (
-                    match parse_expr None 0 t with
-                        | exp, RightParen::tt -> (exp, tt)
-                        | _ -> failwith "unmatched `)`"
-                ) in
-                parse_expr (Some exp) prec tt
-
-            | _ -> failwith "None: unexpected"
-    and parse_infix (exp:re) (prec:int) (ts:token list) : (re * (token list)) =
+            | (Ch _)::_ -> parse_operand prec ts
+            | Alter::_ -> parse_prefix prec ts
+            | LeftParen::_ -> parse_closefix prec ts
+            | _ -> failwith "prefix_like: unexpected"
+    and parse_operand (prec:int) = function
+        | (Ch c)::t -> parse_expr (Some (Character c)) prec t
+        | _ -> failwith "operand: unexpected"
+    and parse_prefix (prec:int) = function
+        | Alter::_ as ts -> parse_expr (Some (Epsilon)) prec ts
+        | _ -> failwith "prefix: unexpected"
+    and parse_closefix (prec:int) = function
+        | LeftParen::t ->
+            let (exp, tt) = (
+                (* FIXME: tail call *)
+                match parse_expr None 0 t with
+                    | exp, RightParen::tt -> (exp, tt)
+                    | _ -> failwith "unmatched `)`"
+            ) in
+            parse_expr (Some exp) prec tt
+        | _ -> failwith "closefix: unexpected"
+    and parse_infix_like (exp:re) (prec:int) (ts:token list) : (re * (token list)) =
         match ts with
             | [] -> (exp, [])
             | RightParen::_ -> (exp, ts)
-
-            | h::t when is_postfix h ->
-                if prec < precedence h
-                then (
-                    let e = build_postfix h exp in
-                    parse_expr (Some e) prec t
-                ) else (
-                    (exp, ts)
-                )
-
-            | h::t when is_infix_right h ->
-                if prec <= precedence h
-                then (
-                    let (e2, tt) = parse_expr None (precedence h) t in
-                    let e = build_infix h exp e2 in
-                    parse_expr (Some e) prec tt
-                ) else (
-                    (exp, ts)
-                )
-
-            | _ -> failwith "Some: unexpected"
-    and is_postfix = function
-        | Repeat -> true
-        | _ -> false
-    and is_infix_right = function
-        | Alter | Concat -> true
-        | _ -> false
-    and build_postfix op exp =
-        match op with
-            | Repeat -> Repeation exp
-            | _ -> failwith "never"
+            | Repeat::_ -> parse_postfix exp prec ts
+            | Alter::_ | Concat::_ -> parse_infix_right exp prec ts
+            | _ -> failwith "infix_like: unexpected"
+    and parse_postfix (exp:re) (prec:int) = function
+        | Repeat::t when prec < precedence Repeat ->
+            parse_expr (Some (Repeation exp)) prec t
+        (* | _ -> failwith "postfix: unexpected" *)
+        | ts -> (exp, ts)
+    and parse_infix_right (exp:re) (prec:int) = function
+        | h::t when prec <= precedence h ->
+            (* FIXME: tail call *)
+            let (e2, tt) = parse_expr None (precedence h) t in
+            parse_expr (Some (build_infix h exp e2)) prec tt
+        (* | _ -> failwith "infix_right: unexpected" *)
+        | ts -> (exp, ts)
     and build_infix op left right =
         match op with
             | Alter -> Alternation (left, right)
             | Concat -> Concatenation (left, right)
-            | _ -> failwith "never"
+            | _ -> failwith "build_infix: unexpected"
     in
     match parse_expr None 0 (Lexer.scan input) with
         | r, [] -> r
