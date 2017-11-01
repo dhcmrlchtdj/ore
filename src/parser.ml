@@ -222,3 +222,5 @@ let pratt (input:string) : re =
     match parse_expr None 0 (Lexer.scan input) with
         | r, [] -> r
         | _ -> failwith "pratt unexpected"
+
+let parse input = pratt input |> Ast.simplify

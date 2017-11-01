@@ -1,75 +1,103 @@
+module P = Printf
+
+let cases = [
+    "";
+    "a";
+    "ab";
+    "abc";
+
+    "a*";
+    "a*b";
+    "a*bc";
+    "a*b*";
+    "a*b*c";
+    "a*b*cd";
+    "ab*";
+    "ab*c";
+    "ab*cd";
+
+    "a|b";
+    "a|b|c";
+    "ab|cd";
+    "ab|cd|ef";
+
+    "|";
+    "ab|";
+    "|ab";
+    "||";
+    "ab||";
+    "|ab|";
+    "||ab";
+
+    "a*|b*";
+    "a*|b*c";
+    "a*|bc";
+    "a*b|c*d";
+    "ab*|c*d";
+    "ab*|c*d|ef*";
+
+    "()";
+    "(a)";
+    "(a)(b)";
+    "(ab)(cd)";
+    "(a)bc";
+    "a(b)";
+    "ab(cd)";
+    "ab(cd)ef";
+    "(ab)cd";
+
+    "(a|b)c";
+    "(a|bc)de";
+    "a(b|c)";
+    "a(b|c)d";
+    "a(bc|cd)e";
+
+    "(a)*";
+    "(ab)*";
+    "(a*)*";
+    "(ab*)*cd";
+    "ab(c*d)e";
+    "(a*)*";
+    "a(b*c)*";
+
+    "aa*";
+    "a*a";
+    "a*a*a";
+    "(a|b)*(a|b)";
+    "a*|a";
+    "a*|a*";
+    "(ab)|(ab)*";
+
+    "a(b|c)*";
+]
+
+let try_parse fn case =
+    try fn case |> Ast.to_string
+    with Failure s -> s
+
+let test_parser () =
+    List.iter (fun case ->
+        let base = try_parse Parser.parse case in
+        let rd = try_parse Parser.recursive_descent case in
+        let sy = try_parse Parser.shunting_yard case in
+        let pc = try_parse Parser.precedence_climbing case in
+        P.printf "%45s\n" case;
+        P.printf "%45s\n" base;
+        P.printf "%45s\n" rd;
+        P.printf "%45s\n" sy;
+        P.printf "%45s\n" pc;
+        print_newline ()
+    ) cases
+
+let test_nfa () =
+    List.iter(fun case ->
+        let ast = Parser.parse case in
+        let nfa = Nfa.to_nfa ast in
+        print_endline (Nfa.to_string nfa)
+    ) cases
+
+
 let () =
-    let cases = [
-        "";
-        "a";
-        "ab";
-        "abc";
-
-        "a*";
-        "a*b";
-        "a*bc";
-        "a*b*";
-        "a*b*c";
-        "a*b*cd";
-        "ab*";
-        "ab*c";
-        "ab*cd";
-
-        "a|b";
-        "a|b|c";
-        "ab|cd";
-        "ab|cd|ef";
-
-        "|";
-        "ab|";
-        "|ab";
-        "||";
-        "ab||";
-        "|ab|";
-        "||ab";
-
-        "a*|b*";
-        "a*|b*c";
-        "a*|bc";
-        "a*b|c*d";
-        "ab*|c*d";
-        "ab*|c*d|ef*";
-
-        "()";
-        "(a)";
-        "(a)(b)";
-        "(ab)(cd)";
-        "(a)bc";
-        "a(b)";
-        "ab(cd)";
-        "ab(cd)ef";
-        "(ab)cd";
-
-        "(a|b)c";
-        "(a|bc)de";
-        "a(b|c)";
-        "a(b|c)d";
-        "a(bc|cd)e";
-
-        "(a)*";
-        "(ab)*";
-        "(a*)*";
-        "(ab*)*cd";
-        "ab(c*d)e";
-        "(a*)*";
-        "a(b*c)*";
-
-        "a(b|c)*";
-    ] in
-    let test f2 case =
-        let f1 = Parser.recursive_descent in
-        let x = (try f1 case |> Ast.to_string with Failure s -> s) in
-        let y = (try f2 case |> Ast.to_string with Failure s -> s) in
-        let xx = (try f1 case |> Ast.simplify |> Ast.to_string with Failure s -> s) in
-        let yy = (try f2 case |> Ast.simplify |> Ast.to_string with Failure s -> s) in
-        Printf.printf "%15s \t %45s \t %45s \t %B\n" case x y (xx=yy)
-    in
-    (* List.iter (test Parser.shunting_yard) cases; *)
-    (* List.iter (test Parser.precedence_climbing) cases; *)
-    List.iter (test Parser.pratt) cases;
+    (* test_parser (); *)
+    test_nfa ();
     ()
