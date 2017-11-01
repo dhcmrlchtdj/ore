@@ -1,12 +1,8 @@
 # regular expression
 
 - syntax
-    - infix: `ab` `a|b`
-    - postfix: `a*` `a+` `?`
-    - group: `(a)`
-
-- parser
-    - recursive descent
-    - shunting yard
-    - precedence climbing
-    - pratt
+    - character: `a-zA-Z0-9`
+    - group: `(e)`
+    - repeat: `e*`
+    - concat: `xy`
+    - alter: `x|y`
