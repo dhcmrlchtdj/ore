@@ -26,7 +26,7 @@ let to_nfa (exp:re) : state =
             let sub_out = build_eps rep_out in
             let sub_in = aux sub_out re in
             let rep_in = build_eps sub_in in
-            sub_out.next2 <- Some (Eps, sub_in);
+            sub_in.next2 <- Some (Eps, sub_out);
             rep_out.next2 <- Some (Eps, rep_in);
             rep_in
         | Concatenation (r1, r2) ->
@@ -82,3 +82,52 @@ let to_string nfa =
         |> lst_to_string
     in
     P.sprintf "digraph G {\n%s}" content
+
+
+let explode s =
+    let rec exp i l =
+        if i < 0
+        then l
+        else exp (i - 1) (s.[i] :: l) in
+    exp (String.length s - 1) []
+
+let backtracking_match (pattern:string) (s:string) : bool =
+    let ast = Parser.parse pattern in
+    let nfa = to_nfa ast in
+    (* print_endline (to_string nfa); *)
+    let clst = explode s in
+    let rec backtracking state lst =
+        match lst with
+            | [] -> (match state with {last=true;_} -> true | _ -> false)
+            | _::t -> (aux state lst) || (backtracking state t)
+    and aux state lst =
+        match lst with
+            | [] ->
+                (match state with
+                    | {last=true;_} -> true
+                    | {next1=Some(Eps,n);next2=None;_} -> aux n lst
+                    | {next1=Some(Eps,n1);next2=Some(Eps,n2);_} ->
+                        (aux n1 [])||(aux n2 [])
+                    | _ -> false)
+            | h::t ->
+                (match state with
+                    | {last=true;_} -> true
+                    | {next1=Some x;next2=None;_} ->
+                        (match x with
+                            | Eps, n -> aux n lst
+                            | Ch c, n when c=h -> aux n t
+                            | Ch _, _ -> false)
+                    | {next1=Some x;next2=Some y;_} ->
+                        if (match x with
+                            | Eps, n -> aux n lst
+                            | Ch c, n when c=h -> aux n t
+                            | Ch _, _ -> false)
+                        then true
+                        else (match y with
+                            | Eps, n -> aux n lst
+                            | Ch c, n when c=h -> aux n t
+                            | Ch _, _ -> false)
+                    | _ -> failwith "never"
+                )
+    in
+    backtracking nfa clst

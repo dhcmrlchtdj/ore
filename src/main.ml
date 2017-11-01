@@ -99,8 +99,38 @@ let test_nfa () =
         print_newline ()
     ) cases
 
+let test_nfa_backtracking () =
+    let cases = [
+        ("", "", true);
+        ("", "a", true);
+
+        ("a", "a", true);
+        ("a", "b", false);
+        ("a", "ba", true);
+
+        ("a*", "a", true);
+        ("a*", "ba", true);
+        ("a*", "bb", true);
+        ("a*bc", "aaabc", true);
+
+        ("ab", "ab", true);
+        ("ab", "abc", true);
+        ("ab", "ac", false);
+
+        ("a|b", "a", true);
+        ("abc|b", "a", false);
+        ("a|b", "b", true);
+        ("a|b", "ab", true);
+        ("a|b", "c", false);
+
+        ("a(b|c)*", "abbb", true);
+    ] in
+    List.iter (fun (p, s, b) ->
+        P.printf "%10s \t %10s \t %B\n" p s (b = (Nfa.backtracking_match p s))
+    ) cases
 
 let () =
     (* test_parser (); *)
-    test_nfa ();
+    (* test_nfa (); *)
+    test_nfa_backtracking ();
     ()
