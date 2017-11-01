@@ -34,6 +34,7 @@ let scan (input:string) : token list =
     let rec aux (cs:char list) (ts:token list) : token list =
         match cs with
             | [] -> List.rev ts
+            | ' ' :: t -> aux t ts
             | '(' :: t -> aux t (LeftParen :: ts)
             | ')' :: t -> aux t (RightParen :: ts)
             | '*' :: t -> aux t (Repeat :: ts)

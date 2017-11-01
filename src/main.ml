@@ -54,10 +54,10 @@ let cases = [
 
     "(a)*";
     "(ab)*";
-    "(a*)*";
-    "(ab*)*cd";
+    "(a* )*";
+    "(ab* )*cd";
     "ab(c*d)e";
-    "(a*)*";
+    "(a* )*";
     "a(b*c)*";
 
     "aa*";
@@ -93,7 +93,10 @@ let test_nfa () =
     List.iter(fun case ->
         let ast = Parser.parse case in
         let nfa = Nfa.to_nfa ast in
-        print_endline (Nfa.to_string nfa)
+        print_endline case;
+        print_endline (Ast.to_string ast);
+        print_endline (Nfa.to_string nfa);
+        print_newline ()
     ) cases
 
 
