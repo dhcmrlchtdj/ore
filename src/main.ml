@@ -84,7 +84,8 @@ let cases = [
 
     (* "a|b"; *)
     (* "(a|b)*"; *)
-    "a*bc";
+    (* "a*bc"; *)
+    "a*b|a*";
 ]
 
 let try_parse fn case =
@@ -149,6 +150,7 @@ let test_nfa_backtracking () =
         ("a*bc", "bc", true);
         ("a*bc", "ab", false);
         ("a(bc|d)", "ab", false);
+        ("a*b|a*", "a", true);
     ] in
     List.iter (fun (p, s, b) ->
         P.printf "%10s \t %10s \t %B\n" p s (b = (Nfa.backtracking_match p s))
