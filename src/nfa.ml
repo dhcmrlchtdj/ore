@@ -28,17 +28,18 @@ let to_nfa (exp:re) : state =
             let rep_in = build_eps sub_in in
             sub_in.next2 <- Some (Eps, sub_out);
             rep_out.next2 <- Some (Eps, rep_in);
-            rep_in
+            build_eps rep_in
         | Concatenation (r1, r2) ->
             let s2_in = aux state_out r2 in
             let s1_in = aux s2_in r1 in
-            s1_in
+            build_eps s1_in
         | Alternation (r1, r2) ->
             let alt_out = build_eps state_out in
             let s1_in = aux alt_out r1 in
             let s2_in = aux alt_out r2 in
             let alt_in = build_state s1_in s2_in in
-            alt_in
+            build_eps alt_in
+            (* alt_in *)
     in
     let end_state = build true None None in
     aux end_state exp
@@ -54,10 +55,10 @@ let to_string nfa =
         | [] -> ""
         | h::t -> h ^ "\n" ^(lst_to_string t)
     in
-    let edge_to_string acc e n s =
+    let edge_to_string acc e n s xx =
         let s = (match e with
-            | Eps -> P.sprintf "S%d -> S%d" n s.n
-            | Ch c -> P.sprintf "S%d -> S%d[label=%c]" n s.n c
+            | Eps -> P.sprintf "S%d -> S%d[label=%d]" n s.n xx
+            | Ch c -> P.sprintf "S%d -> S%d[label=%c%d]" n s.n c xx
         ) in s::acc
     in
     let rec aux acc s =
@@ -67,13 +68,13 @@ let to_string nfa =
             | {n;next1=Some(e1,s1);next2=None;_} ->
                 s.x <- true;
                 let prev = aux acc s1 in
-                edge_to_string prev e1 n s1
+                edge_to_string prev e1 n s1 1
             | {n;next1=Some(e1,s1);next2=Some(e2,s2);_} ->
                 s.x <- true;
                 let prev1 = aux acc s1 in
                 let prev2 = aux prev1 s2 in
-                let curr1 = edge_to_string prev2 e1 n s1 in
-                edge_to_string curr1 e2 n s2
+                let curr1 = edge_to_string prev2 e1 n s1 1 in
+                edge_to_string curr1 e2 n s2 2
             | _ -> failwith "unexpected"
     in
     let content =
@@ -97,17 +98,23 @@ let backtracking_match (pattern:string) (s:string) : bool =
     (* print_endline (to_string nfa); *)
     let clst = explode s in
     let rec backtracking state lst =
-        match lst with
-            | [] -> (match state with {last=true;_} -> true | _ -> false)
-            | _::t -> (aux state lst) || (backtracking state t)
+        aux state lst
     and aux state lst =
         match lst with
             | [] ->
                 (match state with
+                    | {x=true;_} -> false
                     | {last=true;_} -> true
-                    | {next1=Some(Eps,n);next2=None;_} -> aux n lst
+                    | {next1=Some(Eps,n);next2=None;_} ->
+                        state.x <- true;
+                        if n.x = true then false else aux n []
                     | {next1=Some(Eps,n1);next2=Some(Eps,n2);_} ->
-                        (aux n1 [])||(aux n2 [])
+                        state.x <- true;
+                        (match n1.x, n2.x with
+                            | false, false -> (aux n1 []) || (aux n2 [])
+                            | false, true -> (aux n1 [])
+                            | true, false -> (aux n2 [])
+                            | true, true -> false)
                     | _ -> false)
             | h::t ->
                 (match state with
@@ -117,17 +124,29 @@ let backtracking_match (pattern:string) (s:string) : bool =
                             | Eps, n -> aux n lst
                             | Ch c, n when c=h -> aux n t
                             | Ch _, _ -> false)
-                    | {next1=Some x;next2=Some y;_} ->
-                        if (match x with
-                            | Eps, n -> aux n lst
-                            | Ch c, n when c=h -> aux n t
-                            | Ch _, _ -> false)
-                        then true
-                        else (match y with
-                            | Eps, n -> aux n lst
-                            | Ch c, n when c=h -> aux n t
-                            | Ch _, _ -> false)
-                    | _ -> failwith "never"
-                )
+                    | {next1=Some (e1, n1);next2=Some (e2, n2);_} ->
+                        (match n1.x, n2.x with
+                            | false, false -> (
+                                    (match e1 with
+                                        | Eps -> aux n1 lst
+                                        | Ch c when c=h -> aux n1 t
+                                        | Ch _ -> false) ||
+                                    (match e2 with
+                                        | Eps -> aux n2 lst
+                                        | Ch c when c=h -> aux n2 t
+                                        | Ch _ -> false)
+                                )
+                            | false, true ->
+                                (match e1 with
+                                    | Eps -> aux n1 lst
+                                    | Ch c when c=h -> aux n1 t
+                                    | Ch _ -> false)
+                            | true, false ->
+                                (match e2 with
+                                    | Eps -> aux n2 lst
+                                    | Ch c when c=h -> aux n2 t
+                                    | Ch _ -> false)
+                            | true, true -> false)
+                    | _ -> failwith "never")
     in
     backtracking nfa clst
