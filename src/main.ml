@@ -85,7 +85,7 @@ let cases = [
     (* "a|b"; *)
     (* "(a|b)*"; *)
     (* "a*bc"; *)
-    "a*b|a*";
+    (* "a*b|a*"; *)
 ]
 
 let try_parse fn case =
@@ -119,26 +119,26 @@ let test_nfa () =
 let test_nfa_backtracking () =
     let cases = [
         ("", "", true);
-        ("", "a", true);
+        ("", "a", false);
 
         ("a", "a", true);
         ("a", "b", false);
         ("a", "ba", false);
 
         ("a*", "a", true);
-        ("a*", "b", true);
-        ("a*", "ba", true);
-        ("a*", "bb", true);
+        ("a*", "b", false);
+        ("a*", "ba", false);
+        ("a*", "bb", false);
         ("a*bc", "aaabc", true);
 
         ("ab", "ab", true);
-        ("ab", "abc", true);
+        ("ab", "abc", false);
         ("ab", "ac", false);
 
         ("a|b", "a", true);
         ("abc|b", "a", false);
         ("a|b", "b", true);
-        ("a|b", "ab", true);
+        ("a|b", "ab", false);
         ("a|b", "c", false);
         ("abab|abbb", "abbb", true);
 

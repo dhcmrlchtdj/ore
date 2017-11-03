@@ -1,130 +1,86 @@
 open Ast
 
 type edge = Eps | Ch of char
-and out = (edge * state) option
-and state = {
-    n: int;
-    last: bool;
-    mutable next1: out;
-    mutable next2: out;
-    mutable x: bool;
-}
-let i = ref 0
-let build l e1 e2 = incr i; {n=(!i);last=l;next1=e1;next2=e2;x=false;}
-let build_eps n = build false (Some (Eps, n)) None
-let build_ch c n = build false (Some (Ch c, n)) None
-let build_state n1 n2 = build false (Some (Eps, n1)) (Some (Eps, n2))
+and state = int
+and chart = state * edge * state
+and states = chart list
+and nfa = states * state
+
+let to_nfa (exp:re) : nfa =
+    let i = ref 0 in
+    let get () : state = incr i; !i in
+    let rec aux (acc:states) (prev:state) (exp:re) : states * state =
+        match exp with
+            | Epsilon ->
+                let e_in = get () in
+                let e_c = e_in, Eps, prev in
+                e_c::acc, e_in
+            | Character c ->
+                let c_in = get () in
+                let c_c = c_in, Ch c, prev in
+                c_c::acc, c_in
+            | Repeation r ->
+                let rep_out = get () in
+                let rep_in = get () in
+                let sub_out = get () in
+                let sub_acc, sub_in = aux acc sub_out r in
+                let rep_acc = (rep_in, Eps, rep_out) ::
+                        (rep_in, Eps, sub_in) ::
+                        (sub_out, Eps, sub_in) ::
+                        (sub_out, Eps, rep_out) ::
+                        (rep_out, Eps, prev) ::
+                        sub_acc in
+                rep_acc, rep_in
+            | Concatenation (r1, r2) ->
+                let r2acc, r2in = aux acc prev r2 in
+                let r1acc, r1in = aux r2acc r2in r1 in
+                r1acc, r1in
+            | Alternation (r1, r2) ->
+                let alt_out = get () in
+                let alt_in = get () in
+                let r2_out = get () in
+                let r1_out = get () in
+                let r2acc, r2in = aux acc r2_out r2 in
+                let r1acc, r1in = aux r2acc r1_out r1 in
+                let alt_acc = (alt_in, Eps, r2in) ::
+                        (alt_in, Eps, r1in) ::
+                        (r1_out, Eps, alt_out) ::
+                        (r2_out, Eps, alt_out) ::
+                        (alt_out, Eps, prev) ::
+                        r1acc in
+                alt_acc, alt_in
+    in
+    aux [] (get ()) exp
 
 
-let to_nfa (exp:re) : state =
-    i := 0;
-    let rec aux (state_out:state) = function
-        | Epsilon -> state_out
-        | Character c -> build_ch c state_out
-        | Repeation re ->
-            let rep_out = build_eps state_out in
-            let sub_out = build_eps rep_out in
-            let sub_in = aux sub_out re in
-            let rep_in = build_eps sub_in in
-            sub_out.next2 <- Some (Eps, sub_in);
-            rep_in.next2 <- Some (Eps, rep_out);
-            build_eps rep_in
-        | Concatenation (r1, r2) ->
-            let s2_in = aux state_out r2 in
-            let s1_in = aux s2_in r1 in
-            build_eps s1_in
-        | Alternation (r1, r2) ->
-            let alt_out = build_eps state_out in
-            let s1_in = aux alt_out r1 in
-            let s2_in = aux alt_out r2 in
-            let alt_in = build_state s1_in s2_in in
-            build_eps alt_in
-    in
-    let end_state = build true None None in
-    aux end_state exp
+let to_string ((states, _):nfa) : string =
+    let lst = List.map (function
+            | s1, Eps, s2 -> Printf.sprintf "S%d -> S%d" s1 s2
+            | s1, Ch c, s2 -> Printf.sprintf "S%d -> S%d[label=%c]" s1 s2 c
+        ) states in
+    let g = String.concat "\n" lst in
+    Printf.sprintf "digraph G {\n%s\n}" g
 
-module P = Printf
-
-let to_string nfa =
-    let rec remove_duplicate = function
-        | [] -> []
-        | h::t -> h::(remove_duplicate (List.filter (fun x -> x<>h) t))
-    in
-    let rec lst_to_string = function
-        | [] -> ""
-        | h::t -> h ^ "\n" ^(lst_to_string t)
-    in
-    let edge_to_string acc e n s =
-        let s = (match e with
-            | Eps -> P.sprintf "S%d -> S%d[label=ε]" n s.n
-            | Ch c -> P.sprintf "S%d -> S%d[label=%c]" n s.n c
-        ) in s::acc
-    in
-    let rec aux acc s =
-        match s with
-            | {x=true;_} -> acc
-            | {last=true;_} -> acc
-            | {n;next1=Some(e1,s1);next2=None;_} ->
-                s.x <- true;
-                let prev = aux acc s1 in
-                edge_to_string prev e1 n s1
-            | {n;next1=Some(e1,s1);next2=Some(e2,s2);_} ->
-                s.x <- true;
-                let prev1 = aux acc s1 in
-                let prev2 = aux prev1 s2 in
-                let curr1 = edge_to_string prev2 e1 n s1 in
-                edge_to_string curr1 e2 n s2
-            | _ -> failwith "unexpected"
-    in
-    let content =
-        aux [] nfa
-        |> remove_duplicate
-        |> lst_to_string
-    in
-    P.sprintf "digraph G {\n%s}" content
-
-
-let explode s =
-    let rec exp i l =
-        if i < 0
-        then l
-        else exp (i - 1) (s.[i] :: l) in
-    exp (String.length s - 1) []
 
 let backtracking_match (pattern:string) (s:string) : bool =
     let ast = Parser.parse pattern in
-    let nfa = to_nfa ast in
-    (* print_endline (to_string nfa); *)
-    let clst = explode s in
-    let rec backtracking state lst : bool =
-        aux state lst
-    and aux state lst =
-        match lst with
+    let (states, state) = to_nfa ast in
+    (* print_endline (to_string (states, state)); *)
+    let rec backtracking (states:states) (prev:state) (lst:char list) : bool =
+        let rec aux = function
             | [] ->
-                (match state with
-                    | {last=true;_} -> true
-                    | {next1=Some(Eps,n);next2=None;_} ->
-                        aux n []
-                    | {next1=Some(Eps,n1);next2=Some(Eps,n2);_} ->
-                        (aux n1 []) || (aux n2 [])
-                    | _ -> false)
-            | h::t ->
-                (match state with
-                    | {last=true;_} -> true
-                    | {next1=Some x;next2=None;_} ->
-                        (match x with
-                            | Eps, n -> aux n lst
-                            | Ch c, n when c=h -> aux n t
-                            | Ch _, _ -> false)
-                    | {next1=Some (e1, n1);next2=Some (e2, n2);_} ->
-                        (match e1 with
-                            | Eps -> aux n1 lst
-                            | Ch c when c=h -> aux n1 t
-                            | Ch _ -> false) ||
-                        (match e2 with
-                            | Eps -> aux n2 lst
-                            | Ch c when c=h -> aux n2 t
-                            | Ch _ -> false)
-                    | _ -> failwith "never")
+                (prev = 1) && (lst = [])
+            | (p, Eps, next)::pt when p = prev ->
+                (backtracking states next lst) || aux pt
+            | (p, Ch c, next)::pt when p = prev ->
+                let m = (
+                    match lst with
+                        | ch::ct when ch = c -> backtracking states next ct
+                        | _ -> false
+                ) in
+                m || aux pt
+            | _::pt -> aux pt
+        in
+        aux states
     in
-    backtracking nfa clst
+    backtracking states state (Util.explode s)

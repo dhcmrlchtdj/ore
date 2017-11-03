@@ -1,12 +1,5 @@
 open Token
 
-let explode s =
-    let rec exp i l =
-        if i < 0
-        then l
-        else exp (i - 1) (s.[i] :: l) in
-    exp (String.length s - 1) []
-
 let right_allow_concat = function
     | Concat -> false
     | Alter -> false
@@ -41,5 +34,5 @@ let scan (input:string) : token list =
             | '|' :: t -> aux t (Alter :: ts)
             | c :: t -> aux t ((Ch c) :: ts)
     in
-    aux (explode input) []
+    aux (Util.explode input) []
     |> insert_concat
