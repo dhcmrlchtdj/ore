@@ -22,18 +22,15 @@ let rec simplify = function
     | Repeation r -> (
             match simplify r with
                 | Epsilon -> Epsilon
-                | Repeation rr | rr -> Repeation rr
+                | Repeation rr -> Repeation rr
+                | rr -> Repeation rr
         )
     | Concatenation (r1, r2) -> (
             match simplify r1, simplify r2 with
-                | Repeation x, Concatenation (Repeation y, z) when x = y -> Concatenation (Repeation x, z)
-                | Repeation x, Concatenation (y, z) when x = y -> Concatenation (Repeation x, z)
-                | x, Concatenation (Repeation y, z) when x = y -> Concatenation (Repeation x, z)
-                | Repeation x, Repeation y when x = y -> Repeation x
-                | x, Repeation y when x = y -> Repeation x
-                | Repeation x, y when x = y -> Repeation x
-                | Epsilon, Epsilon -> Epsilon
                 | Epsilon, r | r, Epsilon -> r
+                | Repeation x, Repeation y when x = y -> Repeation x
+                | Repeation x, Concatenation (Repeation y, z) when x = y -> Concatenation (Repeation y, z)
+                | Concatenation (x, Repeation y), Repeation z  when y = z -> Concatenation (x, Repeation y)
                 | rr1, rr2 -> Concatenation (rr1, rr2)
         )
     | Alternation (r1, r2) -> (
