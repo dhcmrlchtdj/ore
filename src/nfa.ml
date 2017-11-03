@@ -92,61 +92,68 @@ let explode s =
         else exp (i - 1) (s.[i] :: l) in
     exp (String.length s - 1) []
 
+type eend = bool * bool (* input-end, matched *)
 let backtracking_match (pattern:string) (s:string) : bool =
     let ast = Parser.parse pattern in
     let nfa = to_nfa ast in
     (* print_endline (to_string nfa); *)
     let clst = explode s in
-    let rec backtracking state lst =
-        aux state lst
-    and aux state lst =
+    let rec backtracking state lst : bool =
+        let _, e2 = aux state lst in
+        e2
+    and aux state lst : eend =
         match lst with
             | [] ->
                 (match state with
-                    | {x=true;_} -> false
-                    | {last=true;_} -> true
+                    | {x=true;_} -> true, false
+                    | {last=true;_} -> true, true
                     | {next1=Some(Eps,n);next2=None;_} ->
                         state.x <- true;
-                        if n.x = true then false else aux n []
+                        if n.x = true then true, false else aux n []
                     | {next1=Some(Eps,n1);next2=Some(Eps,n2);_} ->
                         state.x <- true;
                         (match n1.x, n2.x with
-                            | false, false -> (aux n1 []) || (aux n2 [])
+                            | false, false -> true, ((aux n1 [])=(true,true) || (aux n2 [])=(true,true))
                             | false, true -> (aux n1 [])
                             | true, false -> (aux n2 [])
-                            | true, true -> false)
-                    | _ -> false)
+                            | true, true -> true, false)
+                    | _ -> true, false)
             | h::t ->
                 (match state with
-                    | {last=true;_} -> true
+                    | {last=true;_} -> false, true
                     | {next1=Some x;next2=None;_} ->
                         (match x with
                             | Eps, n -> aux n lst
                             | Ch c, n when c=h -> aux n t
-                            | Ch _, _ -> false)
+                            | Ch _, _ -> false, false)
                     | {next1=Some (e1, n1);next2=Some (e2, n2);_} ->
                         (match n1.x, n2.x with
                             | false, false -> (
-                                    (match e1 with
+                                    (match (match e1 with
                                         | Eps -> aux n1 lst
                                         | Ch c when c=h -> aux n1 t
-                                        | Ch _ -> false) ||
-                                    (match e2 with
-                                        | Eps -> aux n2 lst
-                                        | Ch c when c=h -> aux n2 t
-                                        | Ch _ -> false)
+                                        | Ch _ -> false, false)
+                                    with
+                                        | true, x -> true, x
+                                        | false, true -> false, true
+                                        | false, false -> (
+                                                (match e2 with
+                                                    | Eps -> aux n2 lst
+                                                    | Ch c when c=h -> aux n2 t
+                                                    | Ch _ -> false, false)
+                                            ))
                                 )
                             | false, true ->
                                 (match e1 with
                                     | Eps -> aux n1 lst
                                     | Ch c when c=h -> aux n1 t
-                                    | Ch _ -> false)
+                                    | Ch _ -> false, false)
                             | true, false ->
                                 (match e2 with
                                     | Eps -> aux n2 lst
                                     | Ch c when c=h -> aux n2 t
-                                    | Ch _ -> false)
-                            | true, true -> false)
+                                    | Ch _ -> false, false)
+                            | true, true -> false, false)
                     | _ -> failwith "never")
     in
     backtracking nfa clst
