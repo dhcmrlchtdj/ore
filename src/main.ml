@@ -6,8 +6,8 @@ let cases = [
     (* "ab"; *)
     (* "abc"; *)
 
-    "a*";
-    "a*b";
+    (* "a*"; *)
+    (* "a*b"; *)
     (* "a*bc"; *)
     (* "a*b*"; *)
     (* "a*b*c"; *)
@@ -209,10 +209,21 @@ let test_dfa_match () =
         P.printf "%10s \t %10s \t %B\n" p s (b = (Dfa.dfa_match p s))
     ) cases
 
+let test_inst () =
+    List.iter(fun case ->
+        let ast = Parser.parse case in
+        let inst = Vm.to_instruction ast in
+        print_endline case;
+        print_endline (Ast.to_string ast);
+        print_endline (Vm.to_string inst);
+        print_newline ()
+    ) cases
+
 let () =
     (* test_parser (); *)
     (* test_nfa (); *)
     (* test_nfa_backtracking (); *)
     (* test_dfa (); *)
-    test_dfa_match ();
+    (* test_dfa_match (); *)
+    test_inst ();
     ()
