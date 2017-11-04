@@ -23,10 +23,10 @@ let to_string ((states, _):dfa) : string =
     in
     let s = String.concat "\n" [
             "digraph DFA {";
-            "\trankdir=LR;";
-            "\tnode [shape=doublecircle];";
+            "\trankdir=LR";
+            "\tnode [shape=doublecircle]";
             (String.concat "\n" e);
-            "\tnode [shape=circle];";
+            "\tnode [shape=circle]";
             g;
             "}";
         ] in

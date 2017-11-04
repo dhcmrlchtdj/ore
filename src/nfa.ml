@@ -63,10 +63,10 @@ let to_string ((states, _):nfa) : string =
     let g = String.concat "\n" lst in
     let s = String.concat "\n" [
             "digraph NFA {";
-            "\trankdir=LR;";
-            "\tnode [shape=doublecircle];";
-            "\tS0;";
-            "\tnode [shape=circle];";
+            "\trankdir=LR";
+            "\tnode [shape=doublecircle]";
+            "\tS0";
+            "\tnode [shape=circle]";
             g;
             "}";
         ] in

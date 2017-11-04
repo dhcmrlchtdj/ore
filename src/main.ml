@@ -70,7 +70,7 @@ let cases = [
 
     (* "b|c"; *)
     (* "(b|c)*"; *)
-    (* "a(b|c)*"; *)
+    "a(b|c)*";
 
     (* "(a* )*"; *)
     (* "a*(a*b)"; *)
@@ -86,6 +86,7 @@ let cases = [
     (* "(a|b)*"; *)
     (* "a*bc"; *)
     (* "a*b|a*"; *)
+    (* "abc|bc|cd|cddd|acc|ace"; *)
 ]
 
 let try_parse fn case =
