@@ -85,8 +85,44 @@ let cases = [
     (* "a|b"; *)
     (* "(a|b)*"; *)
     (* "a*bc"; *)
-    (* "a*b|a*"; *)
-    (* "abc|bc|cd|cddd|acc|ace"; *)
+    "a*b|a*";
+    "abc|bc|cd|cddd|acc|ace";
+]
+
+let match_case = [
+    ("", "", true);
+    ("", "a", false);
+
+    ("a", "a", true);
+    ("a", "b", false);
+    ("a", "ba", false);
+
+    ("a*", "a", true);
+    ("a*", "b", false);
+    ("a*", "ba", false);
+    ("a*", "bb", false);
+    ("a*bc", "aaabc", true);
+
+    ("ab", "ab", true);
+    ("ab", "abc", false);
+    ("ab", "ac", false);
+
+    ("a|b", "a", true);
+    ("abc|b", "a", false);
+    ("a|b", "b", true);
+    ("a|b", "ab", false);
+    ("a|b", "c", false);
+    ("abab|abbb", "abbb", true);
+
+    ("a(b|c)*", "abbb", true);
+    ("a(b|c)*a", "abba", true);
+
+    ("a*b", "a", false);
+    ("a*bc", "abc", true);
+    ("a*bc", "bc", true);
+    ("a*bc", "ab", false);
+    ("a(bc|d)", "ab", false);
+    ("a*b|a*", "a", true);
 ]
 
 let try_parse fn case =
@@ -118,44 +154,9 @@ let test_nfa () =
     ) cases
 
 let test_nfa_backtracking () =
-    let cases = [
-        (* ("", "", true); *)
-        (* ("", "a", false); *)
-
-        (* ("a", "a", true); *)
-        (* ("a", "b", false); *)
-        (* ("a", "ba", false); *)
-
-        (* ("a*", "a", true); *)
-        (* ("a*", "b", false); *)
-        (* ("a*", "ba", false); *)
-        (* ("a*", "bb", false); *)
-        (* ("a*bc", "aaabc", true); *)
-
-        (* ("ab", "ab", true); *)
-        (* ("ab", "abc", false); *)
-        (* ("ab", "ac", false); *)
-
-        (* ("a|b", "a", true); *)
-        (* ("abc|b", "a", false); *)
-        (* ("a|b", "b", true); *)
-        (* ("a|b", "ab", false); *)
-        (* ("a|b", "c", false); *)
-        (* ("abab|abbb", "abbb", true); *)
-
-        ("a(b|c)*", "abbb", true);
-        (* ("a(b|c)*a", "abba", true); *)
-
-        (* ("a*b", "a", false); *)
-        (* ("a*bc", "abc", true); *)
-        (* ("a*bc", "bc", true); *)
-        (* ("a*bc", "ab", false); *)
-        (* ("a(bc|d)", "ab", false); *)
-        (* ("a*b|a*", "a", true); *)
-    ] in
     List.iter (fun (p, s, b) ->
         P.printf "%10s \t %10s \t %B\n" p s (b = (Nfa.backtracking_match p s))
-    ) cases
+    ) match_case
 
 let test_dfa () =
     List.iter(fun case ->
@@ -170,44 +171,9 @@ let test_dfa () =
     ) cases
 
 let test_dfa_match () =
-    let cases = [
-        ("", "", true);
-        ("", "a", false);
-
-        ("a", "a", true);
-        ("a", "b", false);
-        ("a", "ba", false);
-
-        ("a*", "a", true);
-        ("a*", "b", false);
-        ("a*", "ba", false);
-        ("a*", "bb", false);
-        ("a*bc", "aaabc", true);
-
-        ("ab", "ab", true);
-        ("ab", "abc", false);
-        ("ab", "ac", false);
-
-        ("a|b", "a", true);
-        ("abc|b", "a", false);
-        ("a|b", "b", true);
-        ("a|b", "ab", false);
-        ("a|b", "c", false);
-        ("abab|abbb", "abbb", true);
-
-        ("a(b|c)*", "abbb", true);
-        ("a(b|c)*a", "abba", true);
-
-        ("a*b", "a", false);
-        ("a*bc", "abc", true);
-        ("a*bc", "bc", true);
-        ("a*bc", "ab", false);
-        ("a(bc|d)", "ab", false);
-        ("a*b|a*", "a", true);
-    ] in
     List.iter (fun (p, s, b) ->
         P.printf "%10s \t %10s \t %B\n" p s (b = (Dfa.dfa_match p s))
-    ) cases
+    ) match_case
 
 let test_inst () =
     List.iter(fun case ->
@@ -219,11 +185,18 @@ let test_inst () =
         print_newline ()
     ) cases
 
+let test_vm_backtracking () =
+    List.iter (fun (p, s, b) ->
+        P.printf "%10s \t %10s \t %B\n" p s (b = (Vm.vm_backtracking p s))
+    ) match_case
+
+
 let () =
     (* test_parser (); *)
     (* test_nfa (); *)
     (* test_nfa_backtracking (); *)
     (* test_dfa (); *)
     (* test_dfa_match (); *)
-    test_inst ();
+    (* test_inst (); *)
+    test_vm_backtracking ();
     ()

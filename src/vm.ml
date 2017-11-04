@@ -53,10 +53,21 @@ let to_string (inst:inst) =
     |> String.concat "\n"
 
 
-let vm (pattern:string) (s:string) : bool =
+let vm_backtracking (pattern:string) (s:string) : bool =
     let ast = Parser.parse pattern in
     let inst = to_instruction ast in
-    let rec _match (inst:inst) (lst:char list) : bool =
-        false
+    (* print_endline (to_string inst); *)
+    let rec _match (loc, op) s =
+        match op with
+            | Accept -> s = []
+            | Match c ->
+                (match s with
+                    | h::t when h = c -> _match (List.nth inst (loc+1)) t
+                    | _ -> false)
+            | Jump l ->
+                _match (List.nth inst l) s
+            | Split (x, y) ->
+                (_match (List.nth inst x) s) ||
+                (_match (List.nth inst y) s)
     in
-    _match inst (Util.explode s)
+    _match (List.hd inst) (Util.explode s)
