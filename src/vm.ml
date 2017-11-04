@@ -71,3 +71,33 @@ let vm_backtracking (pattern:string) (s:string) : bool =
                 (_match (List.nth inst y) s)
     in
     _match (List.hd inst) (Util.explode s)
+
+let vm_nonbacktracking (pattern:string) (s:string) : bool =
+    let ast = Parser.parse pattern in
+    let inst = to_instruction ast in
+    let get_inst = List.nth inst in
+    (* print_endline (to_string inst); *)
+    let rec _match (curr:loc list) (next:loc list) s : bool =
+        match curr with
+            | [] ->
+                (match s with
+                    | [] -> false
+                    | _::t -> _match next [] t)
+            | h::t ->
+                let _, op = get_inst h in
+                (match op with
+                    | Accept ->
+                        if s = []
+                        then true
+                        else _match t next s
+                    | Match c ->
+                        (match s with
+                            | sh::_ when sh = c ->
+                                _match t ((h+1)::next) s
+                            | _ -> _match t next s)
+                    | Jump l ->
+                        _match (l::t) next s
+                    | Split (x, y) ->
+                        _match (x::y::t) next s)
+    in
+    _match [0] [] (Util.explode s)

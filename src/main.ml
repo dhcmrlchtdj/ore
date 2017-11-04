@@ -190,6 +190,11 @@ let test_vm_backtracking () =
         P.printf "%10s \t %10s \t %B\n" p s (b = (Vm.vm_backtracking p s))
     ) match_case
 
+let test_vm_nonbacktracking () =
+    List.iter (fun (p, s, b) ->
+        P.printf "%10s \t %10s \t %B\n" p s (b = (Vm.vm_nonbacktracking p s))
+    ) match_case
+
 
 let () =
     (* test_parser (); *)
@@ -198,5 +203,6 @@ let () =
     (* test_dfa (); *)
     (* test_dfa_match (); *)
     (* test_inst (); *)
-    test_vm_backtracking ();
+    (* test_vm_backtracking (); *)
+    test_vm_nonbacktracking ();
     ()
