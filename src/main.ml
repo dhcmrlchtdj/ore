@@ -6,8 +6,8 @@ let cases = [
     (* "ab"; *)
     (* "abc"; *)
 
-    (* "a*"; *)
-    (* "a*b"; *)
+    "a*";
+    "a*b";
     (* "a*bc"; *)
     (* "a*b*"; *)
     (* "a*b*c"; *)
@@ -70,7 +70,7 @@ let cases = [
 
     (* "b|c"; *)
     (* "(b|c)*"; *)
-    "a(b|c)*";
+    (* "a(b|c)*"; *)
 
     (* "(a* )*"; *)
     (* "a*(a*b)"; *)
@@ -169,9 +169,50 @@ let test_dfa () =
         print_newline ()
     ) cases
 
+let test_dfa_match () =
+    let cases = [
+        ("", "", true);
+        ("", "a", false);
+
+        ("a", "a", true);
+        ("a", "b", false);
+        ("a", "ba", false);
+
+        ("a*", "a", true);
+        ("a*", "b", false);
+        ("a*", "ba", false);
+        ("a*", "bb", false);
+        ("a*bc", "aaabc", true);
+
+        ("ab", "ab", true);
+        ("ab", "abc", false);
+        ("ab", "ac", false);
+
+        ("a|b", "a", true);
+        ("abc|b", "a", false);
+        ("a|b", "b", true);
+        ("a|b", "ab", false);
+        ("a|b", "c", false);
+        ("abab|abbb", "abbb", true);
+
+        ("a(b|c)*", "abbb", true);
+        ("a(b|c)*a", "abba", true);
+
+        ("a*b", "a", false);
+        ("a*bc", "abc", true);
+        ("a*bc", "bc", true);
+        ("a*bc", "ab", false);
+        ("a(bc|d)", "ab", false);
+        ("a*b|a*", "a", true);
+    ] in
+    List.iter (fun (p, s, b) ->
+        P.printf "%10s \t %10s \t %B\n" p s (b = (Dfa.dfa_match p s))
+    ) cases
+
 let () =
     (* test_parser (); *)
     (* test_nfa (); *)
     (* test_nfa_backtracking (); *)
-    test_dfa ();
+    (* test_dfa (); *)
+    test_dfa_match ();
     ()

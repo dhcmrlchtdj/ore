@@ -102,11 +102,7 @@ let to_dfa ((states, state):Nfa.nfa) : dfa =
                 aux from dfas2 ntod2 nexts2 t
             | (c,n)::t ->
                 let dstate = List.assoc n ntod in
-                let dfas2 = (
-                    if dstate = from
-                    then dfas
-                    else (from,c,dstate)::dfas
-                ) in
+                let dfas2 = (from,c,dstate)::dfas in
                 aux from dfas2 ntod nexts t
         in
         match nfas with
@@ -123,3 +119,27 @@ let to_dfa ((states, state):Nfa.nfa) : dfa =
     let dfa_states, ntod = get_dfa [] [] [start] in
     let in_state = List.assoc start ntod in
     dfa_states, in_state
+
+
+let dfa_match (pattern:string) (s:string) : bool =
+    let ast = Parser.parse pattern in
+    let nfa = Nfa.to_nfa ast in
+    (* print_endline (Nfa.to_string nfa); *)
+    let (states, start) = to_dfa nfa in
+    (* print_endline (to_string (states, start)); *)
+    let rec _match (states:states) ((curr,_end):state) (lst:char list) : bool =
+        let rec aux = function
+            | [] ->
+                _end && (lst = [])
+            | ((prev, _), c, next)::pt when prev = curr ->
+                let m = (
+                    match lst with
+                        | ch::ct when ch = c -> _match states next ct
+                        | _ -> false
+                ) in
+                m || aux pt
+            | _::pt -> aux pt
+        in
+        aux states
+    in
+    _match states start (Util.explode s)
