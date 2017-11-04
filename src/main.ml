@@ -118,46 +118,59 @@ let test_nfa () =
 
 let test_nfa_backtracking () =
     let cases = [
-        ("", "", true);
-        ("", "a", false);
+        (* ("", "", true); *)
+        (* ("", "a", false); *)
 
-        ("a", "a", true);
-        ("a", "b", false);
-        ("a", "ba", false);
+        (* ("a", "a", true); *)
+        (* ("a", "b", false); *)
+        (* ("a", "ba", false); *)
 
-        ("a*", "a", true);
-        ("a*", "b", false);
-        ("a*", "ba", false);
-        ("a*", "bb", false);
-        ("a*bc", "aaabc", true);
+        (* ("a*", "a", true); *)
+        (* ("a*", "b", false); *)
+        (* ("a*", "ba", false); *)
+        (* ("a*", "bb", false); *)
+        (* ("a*bc", "aaabc", true); *)
 
-        ("ab", "ab", true);
-        ("ab", "abc", false);
-        ("ab", "ac", false);
+        (* ("ab", "ab", true); *)
+        (* ("ab", "abc", false); *)
+        (* ("ab", "ac", false); *)
 
-        ("a|b", "a", true);
-        ("abc|b", "a", false);
-        ("a|b", "b", true);
-        ("a|b", "ab", false);
-        ("a|b", "c", false);
-        ("abab|abbb", "abbb", true);
+        (* ("a|b", "a", true); *)
+        (* ("abc|b", "a", false); *)
+        (* ("a|b", "b", true); *)
+        (* ("a|b", "ab", false); *)
+        (* ("a|b", "c", false); *)
+        (* ("abab|abbb", "abbb", true); *)
 
         ("a(b|c)*", "abbb", true);
-        ("a(b|c)*a", "abba", true);
+        (* ("a(b|c)*a", "abba", true); *)
 
-        ("a*b", "a", false);
-        ("a*bc", "abc", true);
-        ("a*bc", "bc", true);
-        ("a*bc", "ab", false);
-        ("a(bc|d)", "ab", false);
-        ("a*b|a*", "a", true);
+        (* ("a*b", "a", false); *)
+        (* ("a*bc", "abc", true); *)
+        (* ("a*bc", "bc", true); *)
+        (* ("a*bc", "ab", false); *)
+        (* ("a(bc|d)", "ab", false); *)
+        (* ("a*b|a*", "a", true); *)
     ] in
     List.iter (fun (p, s, b) ->
         P.printf "%10s \t %10s \t %B\n" p s (b = (Nfa.backtracking_match p s))
     ) cases
 
+let test_dfa () =
+    List.iter(fun case ->
+        let ast = Parser.parse case in
+        let nfa = Nfa.to_nfa ast in
+        let dfa = Dfa.to_dfa nfa in
+        print_endline case;
+        print_endline (Ast.to_string ast);
+        print_endline (Nfa.to_string nfa);
+        print_endline (Dfa.to_string dfa);
+        print_newline ()
+    ) cases
+
 let () =
     (* test_parser (); *)
     (* test_nfa (); *)
-    test_nfa_backtracking ();
+    (* test_nfa_backtracking (); *)
+    test_dfa ();
     ()

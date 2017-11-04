@@ -1,10 +1,12 @@
 open Ast
 
-type edge = Eps | Ch of char
-and state = int
-and chart = state * edge * state
-and states = chart list
+type state = int
+and edge = Eps | Ch of char
+and arrow = state * edge * state
+and states = arrow list
 and nfa = states * state
+
+let _end:state = 0
 
 let to_nfa (exp:re) : nfa =
     let i = ref 0 in
@@ -50,16 +52,25 @@ let to_nfa (exp:re) : nfa =
                         r1acc in
                 alt_acc, alt_in
     in
-    aux [] (get ()) exp
+    aux [] _end exp
 
 
 let to_string ((states, _):nfa) : string =
     let lst = List.map (function
-            | s1, Eps, s2 -> Printf.sprintf "S%d -> S%d" s1 s2
-            | s1, Ch c, s2 -> Printf.sprintf "S%d -> S%d[label=%c]" s1 s2 c
+            | s1, Eps, s2 -> Printf.sprintf "\tS%d -> S%d" s1 s2
+            | s1, Ch c, s2 -> Printf.sprintf "\tS%d -> S%d [label=\"%c\"]" s1 s2 c
         ) states in
     let g = String.concat "\n" lst in
-    Printf.sprintf "digraph G {\n%s\n}" g
+    let s = String.concat "\n" [
+            "digraph NFA {";
+            "\trankdir=LR;";
+            "\tnode [shape=doublecircle];";
+            "\tS0;";
+            "\tnode [shape=circle];";
+            g;
+            "}";
+        ] in
+    s
 
 
 let backtracking_match (pattern:string) (s:string) : bool =
@@ -69,7 +80,7 @@ let backtracking_match (pattern:string) (s:string) : bool =
     let rec backtracking (states:states) (prev:state) (lst:char list) : bool =
         let rec aux = function
             | [] ->
-                (prev = 1) && (lst = [])
+                (prev = _end) && (lst = [])
             | (p, Eps, next)::pt when p = prev ->
                 (backtracking states next lst) || aux pt
             | (p, Ch c, next)::pt when p = prev ->
