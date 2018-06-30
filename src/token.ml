@@ -1,16 +1,12 @@
-type token =
-    | Concat
-    | Alter
-    | Repeat
-    | Ch of char
-    | LeftParen
-    | RightParen
+open Batteries
+
+type token = Concat | Alter | Repeat | Ch of char | LeftParen | RightParen
 
 let to_string = function
     | Concat -> "^"
     | Alter -> "|"
     | Repeat -> "*"
-    | Ch c -> Char.escaped c
+    | Ch c -> String.of_char c
     | LeftParen -> "("
     | RightParen -> ")"
 

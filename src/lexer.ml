@@ -1,3 +1,4 @@
+open Batteries
 open Token
 
 let right_allow_concat = function
@@ -7,6 +8,7 @@ let right_allow_concat = function
     | Ch _ -> true
     | LeftParen -> false
     | RightParen -> true
+
 and left_allow_concat = function
     | Concat -> false
     | Alter -> false
@@ -14,17 +16,16 @@ and left_allow_concat = function
     | Ch _ -> true
     | LeftParen -> true
     | RightParen -> false
-let rec insert_concat (tokens:token list) : token list =
-    match tokens with
-        | [] | [_] ->
-            tokens
-        | x::y::z when (right_allow_concat x) && (left_allow_concat y) ->
-            x :: Concat :: (insert_concat (y::z))
-        | h::t ->
-            h :: (insert_concat t)
 
-let scan (input:string) : token list =
-    let rec aux (cs:char list) (ts:token list) : token list =
+let rec insert_concat (tokens: token list) : token list =
+    match tokens with
+        | [] | [_] -> tokens
+        | x :: y :: z when right_allow_concat x && left_allow_concat y ->
+            x :: Concat :: insert_concat (y :: z)
+        | h :: t -> h :: insert_concat t
+
+let scan (input: string) : token list =
+    let rec aux (cs: char list) (ts: token list) : token list =
         match cs with
             | [] -> List.rev ts
             | ' ' :: t -> aux t ts
@@ -32,7 +33,6 @@ let scan (input:string) : token list =
             | ')' :: t -> aux t (RightParen :: ts)
             | '*' :: t -> aux t (Repeat :: ts)
             | '|' :: t -> aux t (Alter :: ts)
-            | c :: t -> aux t ((Ch c) :: ts)
+            | c :: t -> aux t (Ch c :: ts)
     in
-    aux (Util.explode input) []
-    |> insert_concat
+    aux (String.to_list input) [] |> insert_concat
