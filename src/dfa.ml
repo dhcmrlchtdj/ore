@@ -1,5 +1,3 @@
-open Batteries
-
 type state = int * bool
 
 and edge = char
@@ -16,7 +14,7 @@ and nd_map = (nsl * state) list
 
 and cn_map = (char * nsl) list
 
-let to_string ((states, _): dfa) : string =
+let to_string ((states, _) : dfa) : string =
     let lst =
         List.map
             (function
@@ -34,7 +32,8 @@ let to_string ((states, _): dfa) : string =
         |> List.map (function s, _ -> Printf.sprintf "\tS%d" s)
     in
     let s =
-        String.concat "\n"
+        String.concat
+            "\n"
             [ "digraph DFA {"
             ; "\trankdir=LR"
             ; "\tnode [shape=doublecircle]"
@@ -45,10 +44,13 @@ let to_string ((states, _): dfa) : string =
     in
     s
 
-let to_dfa ((states, state): Nfa.nfa) : dfa =
+
+let to_dfa ((states, state) : Nfa.nfa) : dfa =
     let rec i = ref 0
-    and get () = incr i ; !i
-    and get_epsilon (acc: nsl) (state: Nfa.state) : nsl =
+    and get () =
+        incr i;
+        !i
+    and get_epsilon (acc : nsl) (state : Nfa.state) : nsl =
         let direct =
             states
             |> List.filter (function
@@ -57,14 +59,14 @@ let to_dfa ((states, state): Nfa.nfa) : dfa =
             |> List.map (function _, _, a -> a)
         in
         get_epsilons (state :: acc) direct
-    and get_epsilons (acc: nsl) (states: nsl) : nsl =
+    and get_epsilons (acc : nsl) (states : nsl) : nsl =
         match states with
             | [] -> List.sort_uniq compare acc
             | h :: t ->
                 let acc2 = get_epsilon acc h in
                 get_epsilons acc2 t
-    and get_arrows (acc: cn_map) (state_list: nsl) : cn_map =
-        let rec append_to (acc: cn_map) (access: (char * Nfa.state) list) =
+    and get_arrows (acc : cn_map) (state_list : nsl) : cn_map =
+        let rec append_to (acc : cn_map) (access : (char * Nfa.state) list) =
             match access with
                 | [] -> acc
                 | (c, s) :: t ->
@@ -91,15 +93,17 @@ let to_dfa ((states, state): Nfa.nfa) : dfa =
                 in
                 let acc2 = append_to acc access in
                 get_arrows acc2 t
-    and ndmap_extend (m: nd_map) (n: nsl) : nd_map =
+    and ndmap_extend (m : nd_map) (n : nsl) : nd_map =
         match List.assoc_opt n m with
             | Some _ -> m
             | None ->
                 let dstate = (get (), List.mem Nfa._end n) in
                 (n, dstate) :: m
-    and ndmap_find (m: nd_map) (n: nsl) : state = List.assoc n m
-    and get_dfa (dfas: states) (ntod: nd_map) (nfas: nsl list) : states * nd_map =
-        let rec aux (from: state) (dfas: states) (ntod: nd_map) (nexts: nsl list) 
+    and ndmap_find (m : nd_map) (n : nsl) : state = List.assoc n m
+    and get_dfa (dfas : states) (ntod : nd_map) (nfas : nsl list) :
+        states * nd_map =
+        let rec aux
+                (from : state) (dfas : states) (ntod : nd_map) (nexts : nsl list) 
             : cn_map -> states * nd_map * nsl list = function
             | [] -> (dfas, ntod, nexts)
             | (c, n) :: t when List.assoc_opt n ntod = None ->
@@ -127,11 +131,13 @@ let to_dfa ((states, state): Nfa.nfa) : dfa =
     let in_state = List.assoc start ntod in
     (dfa_states, in_state)
 
-let dfa_match (pattern: string) (s: string) : bool =
+
+let dfa_match (pattern : string) (s : string) : bool =
     let ast = Parser.parse pattern in
     let nfa = Nfa.to_nfa ast in
     let states, start = to_dfa nfa in
-    let rec _match (states: states) ((curr, _end): state) (lst: char list) : bool =
+    let rec _match (states : states) ((curr, _end) : state) (lst : char list) :
+        bool =
         let rec aux = function
             | [] -> _end && lst = []
             | ((prev, _), c, next) :: pt when prev = curr ->
@@ -145,4 +151,4 @@ let dfa_match (pattern: string) (s: string) : bool =
         in
         aux states
     in
-    _match states start (String.to_list s)
+    _match states start (CCString.to_list s)

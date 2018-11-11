@@ -1,4 +1,3 @@
-open Batteries
 open Token
 open Ast
 
@@ -14,8 +13,8 @@ open Ast
  *      | [a-zA-Z0-9]
 *)
 
-let recursive_descent (input: string) : re =
-    let rec parse_alternation (ts: token list) : re * token list =
+let recursive_descent (input : string) : re =
+    let rec parse_alternation (ts : token list) : re * token list =
         let r1, t1 =
             match ts with
                 | [] -> (Epsilon, [])
@@ -28,25 +27,25 @@ let recursive_descent (input: string) : re =
                 let r3 = Alternation (r1, r2) in
                 (r3, ts2)
             | _ -> (r1, t1)
-    and parse_concatenation (ts: token list) : re * token list =
+    and parse_concatenation (ts : token list) : re * token list =
         let r1, ts1 = parse_repeation ts in
         match ts1 with
             | Concat :: t ->
                 let r2, ts2 = parse_concatenation t in
                 (Concatenation (r1, r2), ts2)
             | _ -> (r1, ts1)
-    and parse_repeation (ts: token list) : re * token list =
+    and parse_repeation (ts : token list) : re * token list =
         let r1, ts1 = parse_atom ts in
         match ts1 with Repeat :: t -> (Repeation r1, t) | _ -> (r1, ts1)
-    and parse_atom (ts: token list) : re * token list =
+    and parse_atom (ts : token list) : re * token list =
         match ts with
             | Ch c :: t -> (Character c, t)
-            | LeftParen :: t -> (
-                    let r1, ts1 = parse_alternation t in
-                    match ts1 with
-                        | RightParen :: t -> (r1, t)
-                        | h :: _ -> failwith ("atom: should ) but " ^ Token.to_string h)
-                        | [] -> failwith "atom: should ) but END" )
+            | LeftParen :: t ->
+                let r1, ts1 = parse_alternation t in
+                (match ts1 with
+                    | RightParen :: t -> (r1, t)
+                    | h :: _ -> failwith ("atom: should ) but " ^ Token.to_string h)
+                    | [] -> failwith "atom: should ) but END")
             | RightParen :: _ -> (Epsilon, ts)
             | _ -> failwith "atom: should never happen"
     in
@@ -54,9 +53,11 @@ let recursive_descent (input: string) : re =
         | r, [] -> r
         | _ -> failwith "recursive_descent unexpected"
 
-let shunting_yard (input: string) : re =
-    let rec consume_input (input: token list) (operators: token list)
-            (operands: re list) : re list =
+
+let shunting_yard (input : string) : re =
+    let rec consume_input
+            (input : token list) (operators : token list) (operands : re list) :
+        re list =
         match (input, operators) with
             | [], [] -> operands
             | [], _ -> consume_operator input operators operands
@@ -68,8 +69,9 @@ let shunting_yard (input: string) : re =
             | h :: t, hh :: _ when precedence h >= precedence hh ->
                 consume_input t (h :: operators) operands
             | _ :: _, _ :: _ -> consume_operator input operators operands
-    and consume_operator (ts: token list) (operators: token list)
-            (operands: re list) : re list =
+    and consume_operator
+            (ts : token list) (operators : token list) (operands : re list) : re list
+        =
         match (operators, operands) with
             | Alter :: t, [] -> consume_input ts t [Alternation (Epsilon, Epsilon)]
             | Alter :: t, [x1] -> consume_input ts t [Alternation (Epsilon, x1)]
@@ -87,35 +89,36 @@ let shunting_yard (input: string) : re =
         | [r] -> r
         | _ -> failwith "shunting_yard unexpected"
 
-let precedence_climbing (input: string) : re =
-    let rec parse_expr (ts: token list) (prev: re option) (prec: int) :
+
+let precedence_climbing (input : string) : re =
+    let rec parse_expr (ts : token list) (prev : re option) (prec : int) :
         re * token list =
         let r1, t1 = match prev with None -> parse_atom ts | Some r -> (r, ts) in
         match t1 with
             | [] -> (r1, [])
-            | h :: t when precedence h >= prec -> (
-                    match h with
-                        | Concat | Alter ->
-                            let r2, t2 = parse_expr t None (precedence h) in
-                            let r3 = infix h r1 r2 in
-                            parse_expr t2 (Some r3) prec
-                        | Repeat ->
-                            let r2 = postfix h r1 in
-                            parse_expr t (Some r2) prec
-                        | _ -> failwith "err" )
+            | h :: t when precedence h >= prec ->
+                (match h with
+                    | Concat | Alter ->
+                        let r2, t2 = parse_expr t None (precedence h) in
+                        let r3 = infix h r1 r2 in
+                        parse_expr t2 (Some r3) prec
+                    | Repeat ->
+                        let r2 = postfix h r1 in
+                        parse_expr t (Some r2) prec
+                    | _ -> failwith "err")
             | _ :: _ -> (r1, t1)
-    and parse_atom (ts: token list) : re * token list =
+    and parse_atom (ts : token list) : re * token list =
         match ts with
             | [] -> (Epsilon, [])
             | Ch c :: t -> (Character c, t)
-            | LeftParen :: t -> (
-                    let r1, ts1 = parse_expr t None 0 in
-                    match ts1 with
-                        | RightParen :: t -> (r1, t)
-                        | h :: _ ->
-                            failwith
-                                ("precedence_climbing: atom: should ) but " ^ Token.to_string h)
-                        | [] -> failwith "precedence_climbing: atom: should ) but END" )
+            | LeftParen :: t ->
+                let r1, ts1 = parse_expr t None 0 in
+                (match ts1 with
+                    | RightParen :: t -> (r1, t)
+                    | h :: _ ->
+                        failwith
+                            ("precedence_climbing: atom: should ) but " ^ Token.to_string h)
+                    | [] -> failwith "precedence_climbing: atom: should ) but END")
             | RightParen :: _ -> (Epsilon, ts)
             | Alter :: _ -> (Epsilon, ts)
             | _ -> failwith "precedence_climbing: atom: should never happen"
@@ -131,13 +134,14 @@ let precedence_climbing (input: string) : re =
         | r, [] -> r
         | _ -> failwith "precedence_climbing unexpected"
 
-let pratt (input: string) : re =
-    let rec parse_expr (behind: re option) (prec: int) (ts: token list) :
+
+let pratt (input : string) : re =
+    let rec parse_expr (behind : re option) (prec : int) (ts : token list) :
         re * token list =
         match behind with
             | None -> parse_prefix_like prec ts
             | Some exp -> parse_infix_like exp prec ts
-    and parse_prefix_like (prec: int) (ts: token list) : re * token list =
+    and parse_prefix_like (prec : int) (ts : token list) : re * token list =
         match ts with
             | [] -> (Epsilon, [])
             | RightParen :: _ -> (Epsilon, ts)
@@ -145,13 +149,13 @@ let pratt (input: string) : re =
             | Alter :: _ -> parse_prefix prec ts
             | LeftParen :: _ -> parse_closefix prec ts
             | _ -> failwith "prefix_like: unexpected"
-    and parse_operand (prec: int) = function
+    and parse_operand (prec : int) = function
         | Ch c :: t -> parse_expr (Some (Character c)) prec t
         | _ -> failwith "operand: unexpected"
-    and parse_prefix (prec: int) = function
+    and parse_prefix (prec : int) = function
         | Alter :: _ as ts -> parse_expr (Some Epsilon) prec ts
         | _ -> failwith "prefix: unexpected"
-    and parse_closefix (prec: int) = function
+    and parse_closefix (prec : int) = function
         | LeftParen :: t ->
             let exp, tt =
                 (* FIXME: tail call *)
@@ -161,25 +165,26 @@ let pratt (input: string) : re =
             in
             parse_expr (Some exp) prec tt
         | _ -> failwith "closefix: unexpected"
-    and parse_infix_like (exp: re) (prec: int) (ts: token list) : re * token list =
+    and parse_infix_like (exp : re) (prec : int) (ts : token list) :
+        re * token list =
         match ts with
             | [] -> (exp, [])
             | RightParen :: _ -> (exp, ts)
             | Repeat :: _ -> parse_postfix exp prec ts
             | Alter :: _ | Concat :: _ -> parse_infix_right exp prec ts
             | _ -> failwith "infix_like: unexpected"
-    and parse_postfix (exp: re) (prec: int) = function
+    and parse_postfix (exp : re) (prec : int) = function
         | Repeat :: t when prec < precedence Repeat ->
             parse_expr (Some (Repeation exp)) prec t
-        | (* | _ -> failwith "postfix: unexpected" *)
-            ts -> (exp, ts)
-    and parse_infix_right (exp: re) (prec: int) = function
+        (* | _ -> failwith "postfix: unexpected" *)
+        | ts -> (exp, ts)
+    and parse_infix_right (exp : re) (prec : int) = function
         | h :: t when prec <= precedence h ->
             (* FIXME: tail call *)
             let e2, tt = parse_expr None (precedence h) t in
             parse_expr (Some (build_infix h exp e2)) prec tt
-        | (* | _ -> failwith "infix_right: unexpected" *)
-            ts -> (exp, ts)
+        (* | _ -> failwith "infix_right: unexpected" *)
+        | ts -> (exp, ts)
     and build_infix op left right =
         match op with
             | Alter -> Alternation (left, right)
@@ -189,5 +194,6 @@ let pratt (input: string) : re =
     match parse_expr None 0 (Lexer.scan input) with
         | r, [] -> r
         | _ -> failwith "pratt unexpected"
+
 
 let parse input = pratt input |> Ast.simplify

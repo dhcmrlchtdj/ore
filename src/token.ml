@@ -1,14 +1,13 @@
-open Batteries
-
 type token = Concat | Alter | Repeat | Ch of char | LeftParen | RightParen
 
 let to_string = function
     | Concat -> "^"
     | Alter -> "|"
     | Repeat -> "*"
-    | Ch c -> String.of_char c
+    | Ch c -> CCString.of_char c
     | LeftParen -> "("
     | RightParen -> ")"
+
 
 let precedence = function
     | Ch _ -> -10

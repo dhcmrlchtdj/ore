@@ -1,22 +1,24 @@
-open Batteries
 open Ast
 
 type state = int
 
 and edge = Eps | Ch of char
 
-and arrow = (state * edge * state)
+and arrow = state * edge * state
 
 and states = arrow list
 
-and nfa = (states * state)
+and nfa = states * state
 
 let _end : state = 0
 
-let to_nfa (exp: re) : nfa =
+let to_nfa (exp : re) : nfa =
     let i = ref 0 in
-    let get () : state = incr i ; !i in
-    let rec aux (acc: states) (prev: state) (exp: re) : states * state =
+    let get () : state =
+        incr i;
+        !i
+    in
+    let rec aux (acc : states) (prev : state) (exp : re) : states * state =
         match exp with
             | Epsilon ->
                 let e_in = get () in
@@ -63,18 +65,19 @@ let to_nfa (exp: re) : nfa =
     in
     aux [] _end exp
 
-let to_string ((states, _): nfa) : string =
+
+let to_string ((states, _) : nfa) : string =
     let lst =
         List.map
             (function
                 | s1, Eps, s2 -> Printf.sprintf "\tS%d -> S%d" s1 s2
-                | s1, Ch c, s2 ->
-                    Printf.sprintf "\tS%d -> S%d [label=\"%c\"]" s1 s2 c)
+                | s1, Ch c, s2 -> Printf.sprintf "\tS%d -> S%d [label=\"%c\"]" s1 s2 c)
             states
     in
     let g = String.concat "\n" lst in
     let s =
-        String.concat "\n"
+        String.concat
+            "\n"
             [ "digraph NFA {"
             ; "\trankdir=LR"
             ; "\tnode [shape=doublecircle]"
@@ -85,11 +88,13 @@ let to_string ((states, _): nfa) : string =
     in
     s
 
-let backtracking_match (pattern: string) (s: string) : bool =
+
+let backtracking_match (pattern : string) (s : string) : bool =
     let ast = Parser.parse pattern in
     let states, state = to_nfa ast in
     (* print_endline (to_string (states, state)); *)
-    let rec backtracking (states: states) (prev: state) (lst: char list) : bool =
+    let rec backtracking (states : states) (prev : state) (lst : char list) :
+        bool =
         let rec aux = function
             | [] -> prev = _end && lst = []
             | (p, Eps, next) :: pt when p = prev ->
@@ -105,4 +110,4 @@ let backtracking_match (pattern: string) (s: string) : bool =
         in
         aux states
     in
-    backtracking states state (String.to_list s)
+    backtracking states state (CCString.to_list s)

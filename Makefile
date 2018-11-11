@@ -7,22 +7,27 @@ OCB_FLAGS := \
 	-tag keep_docs \
 	-tag bin_annot \
 	-tag principal \
-	-tag nopervasives \
 	-use-ocamlfind \
-	-pkg batteries \
 	-pkg alcotest \
+	-pkg containers \
 	-tags 'warn(+a-4),warn_error(-a+31)'
 OCB := ocamlbuild $(OCB_FLAGS)
 
 mlis := $(patsubst %.ml,%,$(wildcard src/*.ml))
 
 .PHONY: main
-main: native
+main: byte
 
-# .PHONY: test
-# test:
-	# @$(OCB) src/test.native
-	# @./test.native
+.PHONY: test
+test: main
+	@$(OCB) src/test.byte
+	@./test.byte
+	@echo "something" | ./main -
+
+.PHONY: byte
+byte: $(mlis)
+	@$(OCB) src/main.byte
+	@ln -sf ./main.byte ./main
 
 .PHONY: native
 native: $(mlis)
